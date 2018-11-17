@@ -108,9 +108,9 @@ class NeuralNetwork:
     
     def init_weights(self):
         for layer in self.layers:
-            for row in layer:
-                for column in row:
-                    layer[row][column] = uniform(-0.7, 0.7)
+            for i in range(layer):
+                for j in range(layer[i]):
+                    layer[i][j] = uniform(-0.7, 0.7)
     
 
 
