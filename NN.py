@@ -37,6 +37,12 @@ def check_zero(matrix_list):
                         return False
     return True
 
+def my_sum(matrix_list1, matrix_list2):
+    return [matrix_list1[i] + matrix_list2[i] for i in range(len(matrix_list1))]
+
+def my_X_scal(scalar, matrix_list):
+    return [scalar * matrix for matrix in matrix_list]
+
 '''
 Una rete neurale viene rappresentata con una lista di matrici, una per ogni layer diverso
 dall'input layer. Ogni matrice ha una riga per ogni neurone presente nel layer attuale e una colonna
@@ -126,13 +132,29 @@ class NeuralNetwork:
         gradient = [np.ones(layer.shape) for layer in self.layers]
         n_iter = 0
 
+        # NB: i pesi vanno aggiornati solo quando l'errore è troppo grande,
+        # quindi appena entro nel while, non alla fine del while
         while(error > toll and n_iter < MAX_ITER and not check_zero(gradient)):
-
+            if n_iter != 0:
+                self.layers = my_sum(self.layers, my_X_scal(learning_rate, gradient)
+            first = True
+            # calcolo del gradiente e dell'errore
+            for index, pattern in enumerate(train_data):
+                outputNN = self.forward(pattern)
+                if first:
+                    gradient = self.backward(pattern, train_class[index])
+                    error = sum((pattern - train_class[index]) ** 2)
+                    first = False
+                else:
+                    gradient = my_sum(gradient, self.backward(pattern, train_class[index]))
+                    error += sum((pattern - train_class[index]) ** 2)
             n_iter += 1
+
+        return error        
 
 ###################-----------PROVA--------###########################
 '''     PROVA BACKWARD
-NN = NeuralNetwork((2, 2, 2), 3*[sigmoid])
+NN = NeuralNetwork((2, 2, 2), 2*[sigmoid])
 NN.layers = [np.array([[0.15, 0.25, 0.35], [0.2, 0.3, 0.35]]), np.array([[0.4, 0.5, 0.6], [0.45, 0.55, 0.6]])]
 out = NN.forward(np.array([0.05, 0.1]))
 print(out)
