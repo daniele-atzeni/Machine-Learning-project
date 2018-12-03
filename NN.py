@@ -121,10 +121,21 @@ class NeuralNetwork:
                 for weight in neuron:
                     weight = uniform(-0.7, 0.7)
 
+    def fit(self, train_data, train_class, learning_rate, toll, MAX_ITER):
+        error = float(inf)
+        gradient = [np.ones(layer.shape) for layer in self.layers]
+        n_iter = 0
+
+        while(error > toll and n_iter < MAX_ITER and not check_zero(gradient)):
+
+            n_iter += 1
+
 ###################-----------PROVA--------###########################
+'''     PROVA BACKWARD
 NN = NeuralNetwork((2, 2, 2), 3*[sigmoid])
 NN.layers = [np.array([[0.15, 0.25, 0.35], [0.2, 0.3, 0.35]]), np.array([[0.4, 0.5, 0.6], [0.45, 0.55, 0.6]])]
 out = NN.forward(np.array([0.05, 0.1]))
 print(out)
 grad = NN.backward(out, np.array([0.8, 0.7]))
 print(grad)
+'''
