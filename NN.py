@@ -31,9 +31,9 @@ def der(func):
 
 def check_zero(matrix_list):
     for matrix in matrix_list:
-            for i in range(len(matrix)):
-                for j in range(len(matrix[0])):
-                    if matrix[i][j] != 0:
+            for row in matrix:
+                for elem in row:
+                    if elem != 0:
                         return False
     return True
 
@@ -51,7 +51,7 @@ class NeuralNetwork:
     def __init__(self, layers, act_functs):
         self.layers = [np.empty((layers[i], layers[i-1] + 1), dtype='float32') for i in range(1, len(layers))]
         self.act_functs = act_functs
-        self.deltas = [np.empty(layers[i], dtype='float32') for i in range(len(layers))]
+        self.deltas = [np.empty(n_neuron, dtype='float32') for n_neuron in layers]
 
     def forward(self, sample):
         # nel forward voglio che deltas rappresenti l'output di ogni neurone
@@ -81,7 +81,7 @@ class NeuralNetwork:
         self.deltas[-1] = error_arr * derF_arr
         # il vettore delle derivate parziali relative agli ultimi archi è il prodotto tra il vettore colonna
         # dei delta e il vettore riga degli output del layer precedente;
-        # lo salviamo come ultimo elemento della lista di matrici che rappresenta il 'gradiente'
+        # lo salviamo come ultimo elemento della lista di matrici che rappresenta il 'gradiente parziale'
         output_prec = np.array([self.act_functs[-2](net) for net in self.deltas[-2]])
         # NB: occhio ai bias
         output_prec = np.append(output_prec, 1)
@@ -91,7 +91,8 @@ class NeuralNetwork:
         result[-1] = deltas_column_vec @ output_prec
 
         # poi per gli hidden layers
-        for i in range(-2, -len(self.layers) - 1, -1):  # bisogna scorrere i layers al contrario, fino al secondo, cioè -len(self.layers) + 1
+        for i in range(-2, -len(self.layers) - 1, -1):  # bisogna scorrere i layers al contrario, fino al secondo, cioè -len(self.layers)
+            # NB: i layer sono len(self.layers) + 1 se contiamo anche l'input layer
             # cambia il modo di calcolare i delta, ma serve sempre il vettore delle derivate ecc..
             derF_arr = np.array([der(self.act_functs[i])(net) for net in self.deltas[i]])
             # e lo dobbiamo moltiplicare con il vettore che in posizione i ha la somma su j di
@@ -116,9 +117,9 @@ class NeuralNetwork:
 
     def init_weights(self):
         for layer in self.layers:
-            for i in range(layer):
-                for j in range(layer[i]):
-                    layer[i][j] = uniform(-0.7, 0.7)
+            for neuron in layer:
+                for weight in neuron:
+                    weight = uniform(-0.7, 0.7)
 
 ###################-----------PROVA--------###########################
 NN = NeuralNetwork((2, 2, 2), 3*[sigmoid])
