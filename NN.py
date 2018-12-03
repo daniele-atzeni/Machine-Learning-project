@@ -29,6 +29,14 @@ def der(func):
     if func == sigmoid:
         return lambda x: sigmoid(x) * (1 - sigmoid(x))
 
+def check_zero(matrix_list):
+    for matrix in matrix_list:
+            for i in range(len(matrix)):
+                for j in range(len(matrix[0])):
+                    if matrix[i][j] != 0:
+                        return False
+    return True
+
 '''
 Una rete neurale viene rappresentata con una lista di matrici, una per ogni layer diverso 
 dall'input layer. Ogni matrice ha una riga per ogni neurone presente nel layer attuale e una colonna
@@ -112,6 +120,74 @@ class NeuralNetwork:
                 for j in range(layer[i]):
                     layer[i][j] = uniform(-0.7, 0.7)
     
+    
+    def predict(self, data):
+        output_arr = []
+        len_data = len(data)
+        for i in range(len_data):
+            outputNN = self.forward(data[i])
+            output_arr.append(outputNN)
+        
+        return output_arr
+    
+    def fit(self, train_x, train_y, tollerance):
+        MAXATTEMPT = 5
+        n_attempt = 0
+        best_error = 100.0
+        best_weights = 0
+        
+        # inizializziamo i pesi diverse volte per trovare i migliori pesi iniziali
+        while n_attempt < MAXATTEMPT:
+            self.init_weights()
+            final_weights = 0
+            MAXITER = 1000
+            iter_count = 0
+            len_train = len(train_x)
+            error_rate = 100.0
+            First = True
+            grad = [np.empty((len(matrix), len(matrix[0])), dtype = 'float32') for matrix in self.layers]
+            # ci fermiamo con l'iterazione solo quando l'errore è accettabile 
+            # o se si supera il numero massimo di iterazioni
+            ############## o se il gradiente è zero
+            while error_rate > tollerance and iter_count < MAXITER:
+                self.layers += grad
+                grad = [np.empty((len(matrix), len(matrix[0])), dtype = 'float32') for matrix in self.layers]
+                # per ogni record del TS:
+                # calcoliamo l'output
+                # aggiorniamo la somma degli errori
+                # aggiorniamo il gradiente parziale tramite il backward
+                for i in range(len_train):
+                    outNN = self.forward(train_x[i])
+                    if First:
+                        error_rate = sum((train_y[i] - outNN)**2)
+                        First = False
+                    else:
+                        error_rate += sum((train_y[i] - outNN)**2)
+                    
+                    grad += self.backward(outNN, train_y[i])
+                
+                # dopo aver iterato su tutto il TS calcoliamo l'errore medio
+                error_rate = error_rate / len_train
+                
+                iter_count += 1
+                ############## se il gradiente = 0 ci fermiamo 
+                if check_zero(grad):
+                    break
+            
+            final_weights = self.layers
+            # se l'errore medio appena trovato è migliore del best_error aggiorno il best_error e i best_weights
+            if error_rate < best_error:
+                best_error = error_rate
+                best_weights = final_weights
+            
+            n_attempt += 1
+        
+        # una volta calcolato il miglior errore e i migliori pesi si assegnano i pesi migliori alla rete
+        if best_error != error_rate:
+            self.layers = best_weights
+        
+        return best_error
+            
 
 
 ###################-----------PROVA--------###########################
