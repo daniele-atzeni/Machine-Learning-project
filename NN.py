@@ -130,27 +130,27 @@ class NeuralNetwork:
         
         return output_arr
     
-    def fit(self, train_x, train_y, tollerance):
+    def fit(self, train_x, train_y, tollerance, learn_rate):
         MAXATTEMPT = 5
         n_attempt = 0
         best_error = 100.0
         best_weights = 0
+        MAXITER = 1000
         
         # inizializziamo i pesi diverse volte per trovare i migliori pesi iniziali
         while n_attempt < MAXATTEMPT:
             self.init_weights()
             final_weights = 0
-            MAXITER = 1000
             iter_count = 0
             len_train = len(train_x)
             error_rate = 100.0
             First = True
-            grad = [np.empty((len(matrix), len(matrix[0])), dtype = 'float32') for matrix in self.layers]
+            grad = [np.zeros((len(matrix), len(matrix[0])), dtype = 'float32') for matrix in self.layers]
             # ci fermiamo con l'iterazione solo quando l'errore è accettabile 
             # o se si supera il numero massimo di iterazioni
             ############## o se il gradiente è zero
             while error_rate > tollerance and iter_count < MAXITER:
-                self.layers += grad
+                self.layers += (grad * learn_rate)
                 grad = [np.empty((len(matrix), len(matrix[0])), dtype = 'float32') for matrix in self.layers]
                 # per ogni record del TS:
                 # calcoliamo l'output
