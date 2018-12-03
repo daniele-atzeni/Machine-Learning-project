@@ -111,8 +111,6 @@ class NeuralNetwork:
             for i in range(layer):
                 for j in range(layer[i]):
                     layer[i][j] = uniform(-0.7, 0.7)
-    
-
 
 ###################-----------PROVA--------###########################
 NN = NeuralNetwork((2, 2, 2), 3*[sigmoid])
