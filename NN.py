@@ -126,7 +126,16 @@ class NeuralNetwork:
             for j in range(len(self.layers[i])):
                 for k in range(len(self.layers[i][j])):
                     self.layers[i][j][k] = uniform(-0.7, 0.7)
-
+                    
+    def predict(self, data):
+        output_arr = []
+        len_data = len(data)
+        for i in range(len_data):
+            outputNN = self.forward(data[i])
+            output_arr.append([round(elem) for elem in outputNN])
+        
+        return output_arr
+   
     def fit(self, train_data, train_class, toll, learning_rate, MAX_ITER):
         error = float('inf')
         gradient = [np.ones(layer.shape) for layer in self.layers]
@@ -162,6 +171,7 @@ class NeuralNetwork:
         return error
 
 ###################-----------PROVA--------###########################
+
 '''     PROVA BACKWARD     
 NN = NeuralNetwork((2, 2, 2), 2*[sigmoid])
 NN.layers = [np.array([[0.15, 0.25, 0.35], [0.2, 0.3, 0.35]]), np.array([[0.4, 0.5, 0.6], [0.45, 0.55, 0.6]])]
@@ -170,10 +180,28 @@ print(out)
 grad = NN.backward(out, np.array([0.8, 0.7]))
 print(grad)
 '''
-''' PROVA 1  '''  
+
+''' PROVA 1  ''' 
+
 data = np.genfromtxt("Monk1.txt")
-target = [np.array(row[0]) for row in data]
+target = [np.array(row[0]).astype('float32') for row in data]
 train_set = [np.array(row[1:-1]) for row in data]
 
 NN = NeuralNetwork((len(train_set[0]), 3, 3, 1), 3*[sigmoid])
-error = NN.fit(train_set, target, 0.001, 0.175342, 1000)
+error = NN.fit(train_set, target, 0.001, 0.1)
+
+data_test = np.genfromtxt("TESTMONK1.txt")
+target_test = [np.array(row[0]).astype('float32') for row in data_test]
+train_set_test = [np.array(row[1:-1]) for row in data_test]
+
+prediction = NN.predict(train_set_test)
+error_test = sum([sum((prediction[i]-target_test[i])**2) for i in range(len(prediction))])
+
+
+count = 0
+for i in range(len(prediction)):
+    print(i, prediction[i], target_test[i])
+    if prediction[i] != target_test[i]:
+        count += 1
+
+print(error_test/len(prediction), count)
