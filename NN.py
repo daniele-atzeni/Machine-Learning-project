@@ -136,7 +136,7 @@ class NeuralNetwork:
         # quindi appena entro nel while, non alla fine del while
         while(error > toll and n_iter < MAX_ITER and not check_zero(gradient)):
             if n_iter != 0:
-                self.layers = my_sum(self.layers, my_X_scal(learning_rate, gradient)
+                self.layers = my_sum(self.layers, my_X_scal(learning_rate, gradient))
             first = True
             # calcolo del gradiente e dell'errore
             for index, pattern in enumerate(train_data):
