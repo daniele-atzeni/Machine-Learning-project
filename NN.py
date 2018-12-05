@@ -152,8 +152,6 @@ class NeuralNetwork:
 
         return error
 
-SAAD E GAY
-
 ###################-----------PROVA--------###########################
 '''     PROVA BACKWARD
 NN = NeuralNetwork((2, 2, 2), 2*[sigmoid])
