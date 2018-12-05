@@ -188,7 +188,7 @@ target = [np.array(row[0]).astype('float32') for row in data]
 train_set = [np.array(row[1:-1]) for row in data]
 
 NN = NeuralNetwork((len(train_set[0]), 3, 3, 1), 3*[sigmoid])
-error = NN.fit(train_set, target, 0.001, 0.1)
+error = NN.fit(train_set, target, 0.001, 0.1, 1000)
 
 data_test = np.genfromtxt("TESTMONK1.txt")
 target_test = [np.array(row[0]).astype('float32') for row in data_test]
