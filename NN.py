@@ -115,10 +115,10 @@ class NeuralNetwork:
         return result
     
     def init_weights(self):
-        for layer in self.layers:
-            for neuron in layer:
-                for weight in neuron:
-                    weight = uniform(-0.7, 0.7)
+        for i in range(len(self.layers)):
+            for j in range(len(self.layers[i])):
+                for k in range(len(self.layers[i][j])):
+                    self.layers[i][j][k] = uniform(-0.7, 0.7)
     
     
     def predict(self, data):
@@ -126,12 +126,12 @@ class NeuralNetwork:
         len_data = len(data)
         for i in range(len_data):
             outputNN = self.forward(data[i])
-            output_arr.append(outputNN)
+            output_arr.append([round(elem) for elem in outputNN])
         
         return output_arr
     
     def fit(self, train_x, train_y, tollerance, learn_rate):
-        MAXATTEMPT = 5
+        MAXATTEMPT = 3
         n_attempt = 0
         best_error = 100.0
         best_weights = 0
@@ -161,16 +161,16 @@ class NeuralNetwork:
                 for i in range(len_train):
                     outNN = self.forward(train_x[i]).astype('float32')
                     if First:
-                        error_rate = float(sum(((train_y[i] - outNN)**2).astype('float32')))
-                        print(error_rate)
+                        error_rate = sum((train_y[i] - outNN)**2)
                         First = False
                     else:
-                        error_rate += float(sum(((train_y[i] - outNN)**2).astype('float32')))
+                        error_rate += sum((train_y[i] - outNN)**2)
                     
-                    grad = [self.backward(outNN, train_y[i])[j] +  grad[j] for j in range(len(grad))] 
+                    gradparz = self.backward(outNN, train_y[i])
+                    grad = [gradparz[j] +  grad[j] for j in range(len(grad))] 
                 
                 # dopo aver iterato su tutto il TS calcoliamo l'errore medio
-                print(error_rate)
+                #print(error_rate)
                 error_rate = error_rate / len_train
                 print(error_rate)
                 
@@ -203,11 +203,26 @@ print(out)
 grad = NN.backward(out, np.array([0.8, 0.7]))
 print(grad)"""
 
+data_test = np.genfromtxt("TESTMONK1.txt")
+target_test = [np.array(row[0]).astype('float32') for row in data_test]
+train_set_test = [np.array(row[1:-1]) for row in data_test]
 
 data = np.genfromtxt("Monk1.txt")
 target = [np.array(row[0]).astype('float32') for row in data]
 train_set = [np.array(row[1:-1]) for row in data]
 
-NN = NeuralNetwork((len(train_set[0]), 5, 1), 3*[identity])
+NN = NeuralNetwork((len(train_set[0]), 3, 3, 1), 3*[sigmoid])
 error = NN.fit(train_set, target, 0.001, 0.1)
 print(error)
+
+prediction = NN.predict(train_set_test)
+error_test = sum([sum((prediction[i]-target_test[i])**2) for i in range(len(prediction))])
+
+
+count = 0
+for i in range(len(prediction)):
+    print(i, prediction[i], target_test[i])
+    if prediction[i] != target_test[i]:
+        count += 1
+
+print(error_test/len(prediction), count)
