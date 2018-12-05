@@ -31,9 +31,9 @@ def der(func):
 
 def check_zero(matrix_list):
     for matrix in matrix_list:
-            for i in range(len(matrix)):
-                for j in range(len(matrix[0])):
-                    if matrix[i][j] != 0:
+            for row in matrix:
+                for elem in row:
+                    if elem != 0:
                         return False
     return True
 
@@ -116,9 +116,9 @@ class NeuralNetwork:
     
     def init_weights(self):
         for layer in self.layers:
-            for i in range(layer):
-                for j in range(layer[i]):
-                    layer[i][j] = uniform(-0.7, 0.7)
+            for neuron in layer:
+                for weight in neuron:
+                    weight = uniform(-0.7, 0.7)
     
     
     def predict(self, data):
@@ -130,44 +130,49 @@ class NeuralNetwork:
         
         return output_arr
     
-    def fit(self, train_x, train_y, tollerance):
+    def fit(self, train_x, train_y, tollerance, learn_rate):
         MAXATTEMPT = 5
         n_attempt = 0
         best_error = 100.0
         best_weights = 0
+        MAXITER = 1000
         
         # inizializziamo i pesi diverse volte per trovare i migliori pesi iniziali
         while n_attempt < MAXATTEMPT:
             self.init_weights()
             final_weights = 0
-            MAXITER = 1000
             iter_count = 0
             len_train = len(train_x)
             error_rate = 100.0
-            First = True
-            grad = [np.empty((len(matrix), len(matrix[0])), dtype = 'float32') for matrix in self.layers]
+            grad = [np.zeros((len(matrix), len(matrix[0])), dtype = 'float32') for matrix in self.layers]
             # ci fermiamo con l'iterazione solo quando l'errore è accettabile 
             # o se si supera il numero massimo di iterazioni
             ############## o se il gradiente è zero
             while error_rate > tollerance and iter_count < MAXITER:
-                self.layers += grad
-                grad = [np.empty((len(matrix), len(matrix[0])), dtype = 'float32') for matrix in self.layers]
+                print(iter_count)
+                First = True
+                grad = [matr *learn_rate for matr in grad]
+                self.layers = [self.layers[i] +  grad[i] for i in range(len(grad))]
+                grad = [np.zeros((len(matrix), len(matrix[0])), dtype = 'float32') for matrix in self.layers]
                 # per ogni record del TS:
                 # calcoliamo l'output
                 # aggiorniamo la somma degli errori
                 # aggiorniamo il gradiente parziale tramite il backward
                 for i in range(len_train):
-                    outNN = self.forward(train_x[i])
+                    outNN = self.forward(train_x[i]).astype('float32')
                     if First:
-                        error_rate = sum((train_y[i] - outNN)**2)
+                        error_rate = float(sum(((train_y[i] - outNN)**2).astype('float32')))
+                        print(error_rate)
                         First = False
                     else:
-                        error_rate += sum((train_y[i] - outNN)**2)
+                        error_rate += float(sum(((train_y[i] - outNN)**2).astype('float32')))
                     
-                    grad += self.backward(outNN, train_y[i])
+                    grad = [self.backward(outNN, train_y[i])[j] +  grad[j] for j in range(len(grad))] 
                 
                 # dopo aver iterato su tutto il TS calcoliamo l'errore medio
+                print(error_rate)
                 error_rate = error_rate / len_train
+                print(error_rate)
                 
                 iter_count += 1
                 ############## se il gradiente = 0 ci fermiamo 
@@ -191,9 +196,18 @@ class NeuralNetwork:
 
 
 ###################-----------PROVA--------###########################
-NN = NeuralNetwork((2, 2, 2), 3*[sigmoid])
+"""NN = NeuralNetwork((2, 2, 2), 3*[sigmoid])
 NN.layers = [np.array([[0.15, 0.25, 0.35], [0.2, 0.3, 0.35]]), np.array([[0.4, 0.5, 0.6], [0.45, 0.55, 0.6]])]
 out = NN.forward(np.array([0.05, 0.1]))
 print(out)
 grad = NN.backward(out, np.array([0.8, 0.7]))
-print(grad)
+print(grad)"""
+
+
+data = np.genfromtxt("Monk1.txt")
+target = [np.array(row[0]).astype('float32') for row in data]
+train_set = [np.array(row[1:-1]) for row in data]
+
+NN = NeuralNetwork((len(train_set[0]), 5, 1), 3*[identity])
+error = NN.fit(train_set, target, 0.001, 0.1)
+print(error)
