@@ -122,15 +122,16 @@ class NeuralNetwork:
         return result
 
     def init_weights(self):
-        for layer in self.layers:
-            for neuron in layer:
-                for weight in neuron:
-                    weight = uniform(-0.7, 0.7)
+        for i in range(len(self.layers)):
+            for j in range(len(self.layers[i])):
+                for k in range(len(self.layers[i][j])):
+                    self.layers[i][j][k] = uniform(-0.7, 0.7)
 
-    def fit(self, train_data, train_class, learning_rate, toll, MAX_ITER):
-        error = float(inf)
+    def fit(self, train_data, train_class, toll, learning_rate, MAX_ITER):
+        error = float('inf')
         gradient = [np.ones(layer.shape) for layer in self.layers]
         n_iter = 0
+        self.init_weights()
 
         # NB: i pesi vanno aggiornati solo quando l'errore è troppo grande,
         # quindi appena entro nel while, non alla fine del while
@@ -141,19 +142,27 @@ class NeuralNetwork:
             # calcolo del gradiente e dell'errore
             for index, pattern in enumerate(train_data):
                 outputNN = self.forward(pattern)
+                out_round = [round(el) for el in outputNN]
                 if first:
-                    gradient = self.backward(pattern, train_class[index])
-                    error = sum((pattern - train_class[index]) ** 2)
+                    gradient = self.backward(outputNN, train_class[index])
+                    error = sum((outputNN - train_class[index]) ** 2)
+                    accuracy_err = sum([abs(el) for el in out_round - train_class[index]])
                     first = False
                 else:
-                    gradient = my_sum(gradient, self.backward(pattern, train_class[index]))
-                    error += sum((pattern - train_class[index]) ** 2)
+                    gradient = my_sum(gradient, self.backward(outputNN, train_class[index]))
+                    error += sum((outputNN - train_class[index]) ** 2)
+                    accuracy_err += sum([abs(el) for el in out_round-train_class[index]])
+            error = error / len(train_data)
+            print(error)
+            print(accuracy_err)
             n_iter += 1
+            
+        print(n_iter)
 
         return error
 
 ###################-----------PROVA--------###########################
-'''     PROVA BACKWARD
+'''     PROVA BACKWARD     
 NN = NeuralNetwork((2, 2, 2), 2*[sigmoid])
 NN.layers = [np.array([[0.15, 0.25, 0.35], [0.2, 0.3, 0.35]]), np.array([[0.4, 0.5, 0.6], [0.45, 0.55, 0.6]])]
 out = NN.forward(np.array([0.05, 0.1]))
@@ -161,3 +170,10 @@ print(out)
 grad = NN.backward(out, np.array([0.8, 0.7]))
 print(grad)
 '''
+''' PROVA 1  '''  
+data = np.genfromtxt("Monk1.txt")
+target = [np.array(row[0]) for row in data]
+train_set = [np.array(row[1:-1]) for row in data]
+
+NN = NeuralNetwork((len(train_set[0]), 3, 3, 1), 3*[sigmoid])
+error = NN.fit(train_set, target, 0.001, 0.175342, 1000)
