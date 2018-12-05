@@ -150,7 +150,9 @@ class NeuralNetwork:
                     error += sum((pattern - train_class[index]) ** 2)
             n_iter += 1
 
-        return error        
+        return error
+
+SAAD E GAY
 
 ###################-----------PROVA--------###########################
 '''     PROVA BACKWARD
