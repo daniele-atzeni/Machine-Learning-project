@@ -152,7 +152,7 @@ class NeuralNetwork:
         len_data = len(data)
         for i in range(len_data):
             outputNN = self.forward(data[i])
-            output_arr.append([round(elem) for elem in outputNN])
+            output_arr.append([elem for elem in outputNN])
 
         return output_arr
 
