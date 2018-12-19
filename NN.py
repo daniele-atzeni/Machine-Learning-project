@@ -157,7 +157,7 @@ class NeuralNetwork:
         return output_arr
 
     def fit(self, train_data, train_class, toll, learning_rate, MAX_ITER):
-        MAX_ATTEMPT = 10
+        MAX_ATTEMPT = 5
         min_error = float('inf')
         best_weights = self.layers
         # i pesi vanno inizializzati più volte
