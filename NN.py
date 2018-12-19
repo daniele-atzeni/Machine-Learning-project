@@ -225,6 +225,6 @@ data = (data - np.mean(data, axis=0)) / np.std(data, axis=0)
 target = [np.array(row[-2:]).astype('float32') for row in data]
 train_set = [np.array(row[:-2]) for row in data]
 
-NN = NeuralNetwork((len(train_set[0]), 500, 500, 2), 3*[relu])
+NN = NeuralNetwork((len(train_set[0]), 50, 50, 2), 3*[relu])
 error = NN.fit(train_set, target, 0.0001, 0.05, 500)
 print('errore = ', error)
