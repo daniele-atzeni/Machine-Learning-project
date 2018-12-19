@@ -227,4 +227,4 @@ train_set = [np.array(row[:-2]) for row in data]
 
 NN = NeuralNetwork((len(train_set[0]), 50, 50, 2), 3*[relu])
 error = NN.fit(train_set, target, 0.0001, 0.05, 500)
-print('errore = ', error)
+print('Errore = ', error)
