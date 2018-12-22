@@ -16,8 +16,7 @@ class Error(Exception):
     pass
 
 class InputError(Error):
-    def __init__(self):
-        Exception.__init__(self, 'NUMERO FUNZIONI ATTIVAZIONE SBAGLIATO')
+    pass
 
 '''
 FUNZIONI DI ATTIVAZIONE NOTE
@@ -61,6 +60,9 @@ def norm(matrix_list):
                 norm += elem**2
     return sqrt(norm)
 
+def MSE(predicted_list, real_list):
+    error_list = [sum((predicted_list[i] - real_list[i])**2) for i in range(len(predicted_list))]
+    return sum(error_list) / len(error_list)
 '''
 Una rete neurale viene rappresentata con una lista di matrici, una per ogni layer diverso
 dall'input layer. Ogni matrice ha una riga per ogni neurone presente nel layer attuale e una colonna
@@ -72,24 +74,30 @@ al numero di neuroni del layer precedente più 1. La rete neurale viene iniziali
 '''
 
 class NeuralNetwork:
-    def __init__(self, layers, act_functs):
-        self.layers = [np.empty((layers[i], layers[i-1] + 1), dtype='float32') for i in range(1, len(layers))]
-        if len(act_functs) != len(layers) - 1:
+    def __init__(self, hidden_layers, act_functs, toll=0.01, learning_rate=0.05, max_iter=200, Lambda=0.001, n_init=5):
+        if len(act_functs) != len(hidden_layers) + 1:
             raise InputError()
+        self.hidden_layers = hidden_layers
+        self.weights = []
         self.act_functs = act_functs
-        self.deltas = [np.empty(n_neuron, dtype='float32') for n_neuron in layers]
+        self.deltas = []
+        self.toll = toll
+        self.learning_rate = learning_rate
+        self.max_iter = max_iter
+        self.Lambda = Lambda
+        self.n_init = n_init
 
     def forward(self, sample):
         # nel forward voglio che deltas rappresenti l'output di ogni neurone
         self.deltas[0] = sample
         input_arr = np.append(sample, 1)
-        for j in range(len(self.layers) - 1):   # per ogni hidden layer
-            output_arr = self.layers[j] @ input_arr
+        for j in range(len(self.weights) - 1):   # per ogni hidden layer
+            output_arr = self.weights[j] @ input_arr
             self.deltas[j + 1] = output_arr     # ci salviamo i nets
             output_arr = np.array([self.act_functs[j](element) for element in output_arr])
             input_arr = np.append(output_arr, 1)
         # e ora l'output layer
-        output_arr = self.layers[-1] @ input_arr
+        output_arr = self.weights[-1] @ input_arr
         self.deltas[-1] = output_arr            # ci salviamo i nets
 
         return np.array([self.act_functs[-1](element) for element in output_arr])
@@ -97,7 +105,7 @@ class NeuralNetwork:
     def backward(self, outputNN, target_arr):
         # dobbiamo calcolare la 'derivata parziale' per ogni peso,
         # quindi il risultato ha la stessa struttura dei layers; lo copio tanto poi sovrascrivo
-        result = self.layers.copy()
+        result = self.weights.copy()
 
         # prima per l'output layer
         error_arr = target_arr - outputNN
@@ -117,20 +125,20 @@ class NeuralNetwork:
         result[-1] = deltas_column_vec @ output_prec
 
         # poi per gli hidden layers
-        for i in range(-2, -len(self.layers) - 1, -1):  # bisogna scorrere i layers al contrario, fino al secondo, cioè -len(self.layers)
-            # NB: i layer sono len(self.layers) + 1 se contiamo anche l'input layer
+        for i in range(-2, -len(self.weights) - 1, -1):  # bisogna scorrere i layers al contrario, fino al secondo, cioè -len(self.weights)
+            # NB: i layer sono len(self.weights) + 1 se contiamo anche l'input layer
             # cambia il modo di calcolare i delta, ma serve sempre il vettore delle derivate ecc..
             derF_arr = np.array([der(self.act_functs[i])(net) for net in self.deltas[i]])
             # e lo dobbiamo moltiplicare con il vettore che in posizione i ha la somma su j di
             # delta_neurone_succ_jesimo * peso_arco_tra_i_e_j
             # NB: i bias non servono!
-            weight_matr = self.layers[i + 1][:, :-1]    # cancello la colonna dei bias
+            weight_matr = self.weights[i + 1][:, :-1]    # cancello la colonna dei bias
             deltas_sum = self.deltas[i + 1].reshape((1, len(self.deltas[i + 1]))) @ weight_matr
             # deltas sum è un vettore riga, voglio che sia un vettore 1D
             deltas_sum = deltas_sum.ravel()
             self.deltas[i] = deltas_sum * derF_arr
             # e nuovamente dobbiamo fare il prodotto vettore riga per vettore colonna
-            if i > -len(self.layers):
+            if i > -len(self.weights):
                 output_prec = np.array([self.act_functs[i - 1](net) for net in self.deltas[i - 1]])
             else:   # se il layer precedente è l'input layer non applico le funzioni di attivazione
                 output_prec = self.deltas[i-1]
@@ -142,39 +150,37 @@ class NeuralNetwork:
         return result
 
     def init_weights(self):
-        for i in range(len(self.layers)):
-            for j in range(len(self.layers[i])):
-                for k in range(len(self.layers[i][j])):
-                    self.layers[i][j][k] = uniform(-1, 1)
+        for i in range(len(self.weights)):
+            for j in range(len(self.weights[i])):
+                for k in range(len(self.weights[i][j])):
+                    self.weights[i][j][k] = uniform(-1, 1)
 
-    def predict(self, data):
-        output_arr = []
-        len_data = len(data)
-        for i in range(len_data):
-            outputNN = self.forward(data[i])
-            output_arr.append([elem for elem in outputNN])
+    def fit(self, train_data, train_class):
+        # creiamo la lista di matrici dei pesi, ora che sappiamo le dimensioni dell'input e dell'output
+        # creiamo anche i delta, ora che sappiamo il numero di neuroni di ogni layer
+        layers_list = [len(train_data[0])] + list(self.hidden_layers) + [len(train_class[0])]
+        self.weights = [np.empty((layers_list[i], layers_list[i-1] + 1), dtype='float32') for i in range(1, len(layers_list))]
+        self.deltas = [np.empty(n_neuron, dtype='float32') for n_neuron in layers_list]
 
-        return output_arr
-
-    def fit(self, train_data, train_class, toll=0.01, learning_rate=0.05, MAX_ITER=200, Lambda=0, MAX_ATTEMPT=10):
+        # ora inizia l'algoritmo
         min_error = float('inf')
-        best_weights = self.layers
+        best_weights = self.weights
         # i pesi vanno inizializzati più volte
         # ogni volta che li inizializziamo facciamo ripartire l'algoritmo vero e proprio
         # memorizziamo l'errore minimo di ogni tentativo e i pesi migliori
-        for n_attempt in range(MAX_ATTEMPT):
-            print('inizializzazione numero ', n_attempt+1)
+        for n_initialization in range(self.n_init):
+            print('inizializzazione numero ', n_initialization + 1)
             error = float('inf')
-            gradient = [np.ones(layer.shape) for layer in self.layers]
+            gradient = [np.ones(layer.shape) for layer in self.weights]
             n_iter = 0
             self.init_weights()
 
             # NB: i pesi vanno aggiornati solo quando l'errore è troppo grande,
             # quindi appena entro nel while, non alla fine del while
-            while(error > toll and n_iter < MAX_ITER and norm(gradient) > 10**(-8) ):
+            while(error > self.toll and n_iter < self.max_iter and norm(gradient) > 10**(-5) ):
                 if n_iter != 0:
-                    #print(norm(self.layers))
-                    self.layers = my_sum(self.layers, my_X_scal(learning_rate, gradient))
+                    #print(norm(self.weights))
+                    self.weights = my_sum(self.weights, my_X_scal(self.learning_rate, gradient))
                 first = True
                 # calcolo del gradiente e dell'errore
                 for index, pattern in enumerate(train_data):
@@ -190,8 +196,8 @@ class NeuralNetwork:
                         error += sum((outputNN - train_class[index]) ** 2)
                         #accuracy_err += sum([abs(el) for el in out_round-train_class[index]])
                 # regolarizzazione
-                if Lambda != 0:
-                    gradient = my_sum(gradient, my_X_scal(-Lambda, self.layers))
+                if self.Lambda != 0:
+                    gradient = my_sum(gradient, my_X_scal(-self.Lambda, self.weights))
                 
                 error = error / len(train_data)
                 #print(error)
@@ -201,15 +207,51 @@ class NeuralNetwork:
 
             if error < min_error:
                 min_error = error
-                best_weights = self.layers 
+                best_weights = self.weights 
 
-        self.layers = best_weights
+        self.weights = best_weights
         return min_error
+
+    
+    def predict(self, data):
+        output_arr = []
+        len_data = len(data)
+        for i in range(len_data):
+            outputNN = self.forward(data[i])
+            output_arr.append([elem for elem in outputNN])
+
+        return output_arr
+
+    #def k_fold_cv(data, k):
+
+    def MonteCarlo_cv(self, data, n_fit=5, test_percentage=0.7):
+        error_list = []
+        for _ in range(n_fit):
+            shuffle(data)
+            # splitting in test and train
+            n_train = round(len(data) * test_percentage)
+            train_data = data[:n_train, :]
+            test_data = data[n_train:, :]
+            # splitting in train attributes, train target, test attr and test target
+            train_x = [np.array(row[:-2]) for row in train_data]
+            train_y = [np.array(row[-2:]) for row in train_data]
+            test_x = [np.array(row[:-2]) for row in test_data]
+            test_y = [np.array(row[-2:]) for row in test_data]
+            # fit the neural network
+            NN.fit(train_x, train_y)
+            # calculate test error
+            test_predict = NN.predict(test_x)
+            mean_squared_error = MSE(test_predict, test_y)
+            error_list.append(mean_squared_error)
+        
+        return np.mean(error_list), np.std(error_list)
+
+
 
 ###################-----------PROVA--------###########################
 
 '''     PROVA BACKWARD
-NN = NeuralNetwork((2, 2, 2), 2*[sigmoid])
+NN = NeuralNetwork([2], 1*[sigmoid])
 NN.layers = [np.array([[0.15, 0.25, 0.35], [0.2, 0.3, 0.35]]), np.array([[0.4, 0.5, 0.6], [0.45, 0.55, 0.6]])]
 out = NN.forward(np.array([0.05, 0.1]))
 print(out)
@@ -223,7 +265,7 @@ data = np.genfromtxt("Monk1.txt")
 target = [np.array(row[0]).astype('float32') for row in data]
 train_set = [np.array(row[1:-1]) for row in data]
 
-NN = NeuralNetwork((len(train_set[0]), 3, 3, 1), 3*[sigmoid])
+NN = NeuralNetwork((3, 3), 3*[sigmoid])
 error = NN.fit(train_set, target)
 
 data_test = np.genfromtxt("TESTMONK1.txt")
@@ -244,33 +286,34 @@ print(error_test/len(prediction), count)
 '''
 
 ''' PROVA TRAINING SET '''
+# eliminiamo la colonna dell'indice
 data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
 # normalization of data
 data = (data - np.mean(data, axis=0)) / np.std(data, axis=0)
 # splitting in test and train, after we shuffle the dataset
 shuffle(data)
-test_percentage = 70
-n_train = round(len(data) * test_percentage / 100)
+test_percentage = 0.7
+n_train = round(len(data) * test_percentage)
 train_data = data[:n_train, :]
 test_data = data[n_train:, :]
 # splitting in train attributes, train target, test attr and test target
 train_x = [np.array(row[:-2]) for row in train_data]
-train_y = [np.array(row[-2:]).astype('float32') for row in train_data]
+train_y = [np.array(row[-2:]) for row in train_data]
 test_x = [np.array(row[:-2]) for row in test_data]
-test_y = [np.array(row[-2:]).astype('float32') for row in test_data]
-# prova con parametri 'casuali', plottando i risultati
-NN = NeuralNetwork((len(train_x[0]), 50, 50, 2), 3*[sigmoid])
-train_error = NN.fit(train_x, train_y, Lambda=0.5)
-print(train_error)
+test_y = [np.array(row[-2:]) for row in test_data]
+# prova con parametri 'casuali'
+NN = NeuralNetwork((50, 50), 3*[sigmoid])
+train_error = NN.fit(train_x, train_y)
 train_predict = NN.predict(train_x)
 test_predict = NN.predict(test_x)
-error_list = [sum((test_predict[i] - test_y[i])**2) for i in range(len(test_predict))]
-test_error = sum(error_list) / len(error_list)
+test_error = MSE(test_predict, test_y)
+print(train_error)
 print(test_error)
+# plot dei risultati
 plt.scatter([point[0] for point in train_y], [point[1] for point in train_y], c='b', alpha=0.05)
 plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='b', alpha=0.05)
-plt.scatter([point[0] for point in train_predict], [point[1] for point in train_predict], c='r', alpha=1)
-plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='r', alpha=1)
+plt.scatter([point[0] for point in train_predict], [point[1] for point in train_predict], c='r')
+plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='r')
 plt.show()
 '''
 # creating train error list and test error list, in function of n_neurons and plotting results
@@ -278,7 +321,7 @@ train_error_list = []
 test_error_list = []
 n_neuron_list = range(2, 15)
 for n_neuron in n_neuron_list:
-    NN = NeuralNetwork((len(train_x[0]), n_neuron, 2), 2*[sigmoid])
+    NN = NeuralNetwork((n_neuron), 2*[sigmoid])
     train_error = NN.fit(train_x, train_y)
     print(train_error)
     train_error_list.append(train_error)
@@ -290,18 +333,18 @@ for n_neuron in n_neuron_list:
 plt.plot(n_neuron_list, train_error_list)
 plt.plot(n_neuron_list, test_error_list)
 plt.show()
+
 ## creating train error list and test error list, in function of n_iteration and plotting results
 train_error_list = []
 test_error_list = []
 n_iteration_list = range(1, 200, 10)
-NN = NeuralNetwork((len(train_x[0]), 10, 10, 2), 3*[sigmoid])
+NN = NeuralNetwork((10, 10), 3*[sigmoid])
 for n_iteration in n_iteration_list:
     train_error = NN.fit(train_x, train_y, n_iteration)
     print(train_error)
     train_error_list.append(train_error)
     test_predict = NN.predict(test_x)
-    error_list = [sum((test_predict[i] - test_y[i])**2) for i in range(len(test_predict))]
-    test_error = sum(error_list) / len(error_list)
+    test_error = MSE(test_predict, test_y)
     print(test_error)
     test_error_list.append(test_error)
 plt.plot(n_iteration_list, train_error_list)
