@@ -169,7 +169,7 @@ class NeuralNetwork:
         # ogni volta che li inizializziamo facciamo ripartire l'algoritmo vero e proprio
         # memorizziamo l'errore minimo di ogni tentativo e i pesi migliori
         for n_initialization in range(self.n_init):
-            print('inizializzazione numero ', n_initialization + 1)
+            #print('inizializzazione numero ', n_initialization + 1)
             error = float('inf')
             gradient = [np.ones(layer.shape) for layer in self.weights]
             n_iter = 0
@@ -238,9 +238,9 @@ class NeuralNetwork:
             test_x = [np.array(row[:-2]) for row in test_data]
             test_y = [np.array(row[-2:]) for row in test_data]
             # fit the neural network
-            NN.fit(train_x, train_y)
+            self.fit(train_x, train_y)
             # calculate test error
-            test_predict = NN.predict(test_x)
+            test_predict = self.predict(test_x)
             mean_squared_error = MSE(test_predict, test_y)
             error_list.append(mean_squared_error)
         
@@ -302,19 +302,36 @@ train_y = [np.array(row[-2:]) for row in train_data]
 test_x = [np.array(row[:-2]) for row in test_data]
 test_y = [np.array(row[-2:]) for row in test_data]
 # prova con parametri 'casuali'
-NN = NeuralNetwork((50, 50), 3*[sigmoid])
-train_error = NN.fit(train_x, train_y)
-train_predict = NN.predict(train_x)
-test_predict = NN.predict(test_x)
-test_error = MSE(test_predict, test_y)
-print(train_error)
-print(test_error)
-# plot dei risultati
-plt.scatter([point[0] for point in train_y], [point[1] for point in train_y], c='b', alpha=0.05)
-plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='b', alpha=0.05)
-plt.scatter([point[0] for point in train_predict], [point[1] for point in train_predict], c='r')
-plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='r')
-plt.show()
+
+result_dict = {}
+for n_neuron in range(20, 500, 20):
+    for n_layer in (1, 2, 4, 6):
+        for func in (sigmoid, relu):
+            NN = NeuralNetwork( n_layer * [round(n_neuron / n_layer)], (n_layer + 1) * [func], Lambda=0.05, n_init=2)
+            train_error = NN.fit(train_x, train_y)
+            train_predict = NN.predict(train_x)
+            test_predict = NN.predict(test_x)
+            test_error = MSE(test_predict, test_y)
+            print('n. neuroni :', n_neuron, 'n. layer :', n_layer, 'funzione :', func)
+            print(train_error)
+            print(test_error)
+            if n_neuron == 20:
+                result_dict[(n_layer, func)] = []
+            result_dict[(n_layer, func)].append((train_error, test_error))
+            '''
+            # plot dei risultati
+            plt.scatter([point[0] for point in train_y], [point[1] for point in train_y], c='b', alpha=0.05)
+            plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='b', alpha=0.05)
+            plt.scatter([point[0] for point in train_predict], [point[1] for point in train_predict], c='r')
+            plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='r')
+            plt.show()
+            '''
+
+for key in result_dict:
+    plt.plot(range(20, 500, 20), result_dict[key][0])
+    plt.plot(range(20, 500, 20), result_dict[key][1])
+    plt.legend(['train', 'test'])
+    plt.savefig(str(key) + '.png')
 '''
 # creating train error list and test error list, in function of n_neurons and plotting results
 train_error_list = []
