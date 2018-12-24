@@ -10,6 +10,7 @@ from numpy.random import shuffle
 import matplotlib.pyplot as plt
 from math import e
 from math import sqrt
+from math import tanh
 from random import uniform
 
 class Error(Exception):
@@ -37,6 +38,9 @@ def relu(x):
         return 0
     return x
 
+def my_tanh(x):
+    return tanh(x)
+
 def der(func):
     if func == identity:
         return lambda x: 1
@@ -44,6 +48,8 @@ def der(func):
         return lambda x: sigmoid(x) * (1 - sigmoid(x))
     if func == relu:
         return lambda x: 0 if x <= 0 else 1
+    if func == my_tanh:
+        return lambda x: 1 - tanh(x)**2
 
 
 def my_sum(matrix_list1, matrix_list2):
@@ -67,10 +73,18 @@ def MSE(predicted_list, real_list):
 Una rete neurale viene rappresentata con una lista di matrici, una per ogni layer diverso
 dall'input layer. Ogni matrice ha una riga per ogni neurone presente nel layer attuale e una colonna
 per ogni arco entrante in ciascun nodo e una colonna per il bias, quindi il numero di colonne è uguale
-al numero di neuroni del layer precedente più 1. La rete neurale viene inizializzata tramite:
-- una lista di interi, dove l'i-esimo intero rappresenta il numero di neuroni dell'i-esimo layer;
-- una lista di stringhe, dove l'i-esima stringa rappresenta la funzione di attivazione da utilizzare
+al numero di neuroni del layer precedente più 1. Queste matrici vengono inizializzate nel metodo fit, che 
+serve ad allenare la rete, cioè nel primo momento in cui si conoscono le dimensioni dell'input e del'output.
+La rete neurale viene inizializzata tramite:
+- hidden_layer: una lista di interi, dove l'i-esimo intero rappresenta il numero di neuroni dell'i-esimo hidden layer;
+- act_functs: una lista di stringhe, dove l'i-esima stringa rappresenta la funzione di attivazione da utilizzare
   nell'i-esimo layer (se la stringa non rappresenta una funzione di attivazione nota: NameError)
+NB: le funzioni di attivazione sono una in più degli hidden layer
+- toll: float, minimo valore accettabile come errore
+- learning_rate: float
+- max_iter: int, numero massimo di volte in cui si scorre il dataset per calcolare il gradiente della funzione da minimizzare
+- Lambda: float, rappresenta il parametro utilizzato per la regolarizzazione
+- n_init: int, numero di volte in cui vengono inizializzati i pesi nel metodo fit 
 '''
 
 class NeuralNetwork:
@@ -169,7 +183,7 @@ class NeuralNetwork:
         # ogni volta che li inizializziamo facciamo ripartire l'algoritmo vero e proprio
         # memorizziamo l'errore minimo di ogni tentativo e i pesi migliori
         for n_initialization in range(self.n_init):
-            #print('inizializzazione numero ', n_initialization + 1)
+            print('inizializzazione numero ', n_initialization + 1)
             error = float('inf')
             gradient = [np.ones(layer.shape) for layer in self.weights]
             n_iter = 0
@@ -265,7 +279,7 @@ data = np.genfromtxt("Monk1.txt")
 target = [np.array(row[0]).astype('float32') for row in data]
 train_set = [np.array(row[1:-1]) for row in data]
 
-NN = NeuralNetwork((3, 3), 3*[sigmoid])
+NN = NeuralNetwork((3, 3), 3*[my_tanh])
 error = NN.fit(train_set, target)
 
 data_test = np.genfromtxt("TESTMONK1.txt")
@@ -303,35 +317,19 @@ test_x = [np.array(row[:-2]) for row in test_data]
 test_y = [np.array(row[-2:]) for row in test_data]
 # prova con parametri 'casuali'
 
-result_dict = {}
-for n_neuron in range(20, 500, 20):
-    for n_layer in (1, 2, 4, 6):
-        for func in (sigmoid, relu):
-            NN = NeuralNetwork( n_layer * [round(n_neuron / n_layer)], (n_layer + 1) * [func], Lambda=0.05, n_init=2)
-            train_error = NN.fit(train_x, train_y)
-            train_predict = NN.predict(train_x)
-            test_predict = NN.predict(test_x)
-            test_error = MSE(test_predict, test_y)
-            print('n. neuroni :', n_neuron, 'n. layer :', n_layer, 'funzione :', func)
-            print(train_error)
-            print(test_error)
-            if n_neuron == 20:
-                result_dict[(n_layer, func)] = []
-            result_dict[(n_layer, func)].append((train_error, test_error))
-            '''
-            # plot dei risultati
-            plt.scatter([point[0] for point in train_y], [point[1] for point in train_y], c='b', alpha=0.05)
-            plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='b', alpha=0.05)
-            plt.scatter([point[0] for point in train_predict], [point[1] for point in train_predict], c='r')
-            plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='r')
-            plt.show()
-            '''
-
-for key in result_dict:
-    plt.plot(range(20, 500, 20), result_dict[key][0])
-    plt.plot(range(20, 500, 20), result_dict[key][1])
-    plt.legend(['train', 'test'])
-    plt.savefig(str(key) + '.png')
+NN = NeuralNetwork( (75, 75, 75, 75), 5 * [my_tanh], Lambda=0.05 )
+train_error = NN.fit(train_x, train_y)
+train_predict = NN.predict(train_x)
+test_predict = NN.predict(test_x)
+test_error = MSE(test_predict, test_y)
+print(train_error)
+print(test_error)
+# plot dei risultati
+plt.scatter([point[0] for point in train_y], [point[1] for point in train_y], c='b', alpha=0.05)
+plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='b', alpha=0.05)
+plt.scatter([point[0] for point in train_predict], [point[1] for point in train_predict], c='r')
+plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='r')
+plt.show()
 '''
 # creating train error list and test error list, in function of n_neurons and plotting results
 train_error_list = []
