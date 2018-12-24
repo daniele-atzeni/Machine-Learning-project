@@ -325,11 +325,12 @@ test_error = MSE(test_predict, test_y)
 print(train_error)
 print(test_error)
 # plot dei risultati
+# training
 plt.scatter([point[0] for point in train_y], [point[1] for point in train_y], c='b', alpha=0.05)
 plt.scatter([point[0] for point in train_predict], [point[1] for point in train_predict], c='r', alpha=0.5)
-plt.show()
-plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='b', alpha=0.05)
-plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='r', alpha=0.5)
+# test
+# plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='b', alpha=0.05)
+# plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='r', alpha=0.5)
 plt.show()
 '''
 # creating train error list and test error list, in function of n_neurons and plotting results
