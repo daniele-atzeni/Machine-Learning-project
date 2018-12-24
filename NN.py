@@ -88,7 +88,7 @@ NB: le funzioni di attivazione sono una in più degli hidden layer
 '''
 
 class NeuralNetwork:
-    def __init__(self, hidden_layers, act_functs, toll=0.01, learning_rate=0.05, max_iter=200, Lambda=0.001, n_init=5):
+    def __init__(self, hidden_layers, act_functs, toll=0.01, learning_rate=0.04, max_iter=200, Lambda=0.000001, n_init=5):
         if len(act_functs) != len(hidden_layers) + 1:
             raise InputError()
         self.hidden_layers = hidden_layers
@@ -167,7 +167,7 @@ class NeuralNetwork:
         for i in range(len(self.weights)):
             for j in range(len(self.weights[i])):
                 for k in range(len(self.weights[i][j])):
-                    self.weights[i][j][k] = uniform(-1, 1)
+                    self.weights[i][j][k] = uniform(-0.7, 0.7)
 
     def fit(self, train_data, train_class):
         # creiamo la lista di matrici dei pesi, ora che sappiamo le dimensioni dell'input e dell'output
@@ -317,7 +317,7 @@ test_x = [np.array(row[:-2]) for row in test_data]
 test_y = [np.array(row[-2:]) for row in test_data]
 # prova con parametri 'casuali'
 
-NN = NeuralNetwork( (75, 75, 75, 75), 5 * [my_tanh], Lambda=0.05 )
+NN = NeuralNetwork( [10, 10], 2 * [my_tanh] + [identity],  learning_rate=0.0001, Lambda=0.5 )
 train_error = NN.fit(train_x, train_y)
 train_predict = NN.predict(train_x)
 test_predict = NN.predict(test_x)
@@ -326,9 +326,10 @@ print(train_error)
 print(test_error)
 # plot dei risultati
 plt.scatter([point[0] for point in train_y], [point[1] for point in train_y], c='b', alpha=0.05)
+plt.scatter([point[0] for point in train_predict], [point[1] for point in train_predict], c='r', alpha=0.5)
+plt.show()
 plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='b', alpha=0.05)
-plt.scatter([point[0] for point in train_predict], [point[1] for point in train_predict], c='r')
-plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='r')
+plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='r', alpha=0.5)
 plt.show()
 '''
 # creating train error list and test error list, in function of n_neurons and plotting results
