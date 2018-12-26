@@ -236,7 +236,36 @@ class NeuralNetwork:
 
         return output_arr
 
-    #def k_fold_cv(data, k):
+    def k_fold_cv(self, data, k=10):
+        # calcoliamo la lunghezza di ogni divisione del dataset
+        divided_data_size = len(data) // k
+        # np.split divide il dataset a seconda degli indici che gli passiamo nella lista (secondo parametro)
+        # quindi list_subdata è una lista di un np.ndarray bidimensionali (attributi in colonna, record in riga)
+        list_subdata = np.split(data, [i * divided_data_size for i in range(1, k)])
+        error_list = []
+        for i in range(k):
+            # splitting in test and train
+            # il test set è semplicemente l'i-esimo elemento della lista delle porzioni del dataset
+            test_data = list_subdata[i]
+            # il training set è la lista dei record presenti in tutti gli altri elementi della lista delle porzioni
+            train_data = []
+            for j in range(k):
+                if j != i:
+                    for row in list_subdata[j]:
+                        train_data.append(row)
+            # splitting in train attributes, train target, test attr and test target
+            train_x = [np.array(row[:-2]) for row in train_data]
+            train_y = [np.array(row[-2:]) for row in train_data]
+            test_x = [np.array(row[:-2]) for row in test_data]
+            test_y = [np.array(row[-2:]) for row in test_data]
+            # fit the neural network
+            train_error = self.fit(train_x, train_y)
+            # calculate test error
+            test_predict = self.predict(test_x)
+            mean_squared_error = MSE(test_predict, test_y)
+            error_list.append((train_error, mean_squared_error))
+        
+        return error_list
 
     def MonteCarlo_cv(self, data, n_fit=5, test_percentage=0.7):
         error_list = []
@@ -252,13 +281,13 @@ class NeuralNetwork:
             test_x = [np.array(row[:-2]) for row in test_data]
             test_y = [np.array(row[-2:]) for row in test_data]
             # fit the neural network
-            self.fit(train_x, train_y)
+            train_error = self.fit(train_x, train_y)
             # calculate test error
             test_predict = self.predict(test_x)
             mean_squared_error = MSE(test_predict, test_y)
-            error_list.append(mean_squared_error)
+            error_list.append((train_error, mean_squared_error))
         
-        return np.mean(error_list), np.std(error_list)
+        return error_list
 
 
 
