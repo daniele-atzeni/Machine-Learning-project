@@ -358,8 +358,8 @@ print(test_error)
 plt.scatter([point[0] for point in train_y], [point[1] for point in train_y], c='b', alpha=0.05)
 plt.scatter([point[0] for point in train_predict], [point[1] for point in train_predict], c='r', alpha=0.5)
 # test
-# plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='b', alpha=0.05)
-# plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='r', alpha=0.5)
+plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='g', alpha=0.05)
+plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='y', alpha=0.5)
 plt.show()
 '''
 # creating train error list and test error list, in function of n_neurons and plotting results
