@@ -236,7 +236,7 @@ class NeuralNetwork:
 
         return output_arr
 
-    def k_fold_cv(self, data, k=10):
+    def k_fold_cv(self, data, k=3):
         # calcoliamo la lunghezza di ogni divisione del dataset
         divided_data_size = len(data) // k
         # np.split divide il dataset a seconda degli indici che gli passiamo nella lista (secondo parametro)
