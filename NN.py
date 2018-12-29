@@ -263,15 +263,16 @@ class NeuralNetwork:
         predicted_y = self.predict(data_x)
         # se dobbiamo classificare lo score è l'accuracy
         if self.act_functs[-1] == sigmoid:
-            # arrotondiamo i valori ottenuti, ottenendo così solo 1 o 0
+            # arrotondiamo i valori ottenuti, ottenendo così una lista di array con 1 o 0
             predicted_classes = [round(prediction) for prediction in predicted_y]
             n_missclass = 0
-            for index, predicted_class in enumerate(predicted_classes):
-                if predicted_class != data_y[index]:
+            for index, predicted_array in enumerate(predicted_classes):
+                if predicted_array[0] != data_y[index][0]:
                     n_missclass += 1
             return n_missclass / len(data_y)
-        else:        
-            error_list = [sum((predicted_y[i] - data_y[i])**2) for i in range(len(predicted_y))]
+        else:
+            # NB predicted_y è una lista di array, così come data_y
+            error_list = [sum((prediction - data_y[index])**2) for index, prediction in enumerate(predicted_y)]
             return sum(error_list) / len(error_list)
 
     def k_fold_cv(self, data, k=5):
