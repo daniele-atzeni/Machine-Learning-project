@@ -397,38 +397,3 @@ plt.scatter([point[0] for point in train_predict], [point[1] for point in train_
 plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='y')
 plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='k')
 plt.show()
-'''
-# creating train error list and test error list, in function of n_neurons and plotting results
-train_error_list = []
-test_error_list = []
-n_neuron_list = range(2, 15)
-for n_neuron in n_neuron_list:
-    NN = NeuralNetwork((n_neuron), ['sigmoid'])
-    train_error = NN.fit(train_x, train_y)
-    print(train_error)
-    train_error_list.append(train_error)
-    test_predict = NN.predict(test_x)
-    error_list = [sum((test_predict[i] - test_y[i])**2) for i in range(len(test_predict))]
-    test_error = sum(error_list) / len(error_list)
-    print(test_error)
-    test_error_list.append(test_error)
-plt.plot(n_neuron_list, train_error_list)
-plt.plot(n_neuron_list, test_error_list)
-plt.show()
-
-## creating train error list and test error list, in function of n_iteration and plotting results
-train_error_list = []
-test_error_list = []
-n_iteration_list = range(1, 200, 10)
-NN = NeuralNetwork((10, 10), 2*['sigmoid'])
-for n_iteration in n_iteration_list:
-    train_error = NN.fit(train_x, train_y, n_iteration)
-    print(train_error)
-    train_error_list.append(train_error)
-    test_error = NN.score(test_x, test_y)
-    print(test_error)
-    test_error_list.append(test_error)
-plt.plot(n_iteration_list, train_error_list)
-plt.plot(n_iteration_list, test_error_list)
-plt.show()
-'''
