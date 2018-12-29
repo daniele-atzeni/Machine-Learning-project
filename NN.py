@@ -17,18 +17,18 @@ class Error(Exception):
     pass
 
 class InputError(Error):
-    pass
+    def __init__(self, message):
+        self.message = message
+
+class UntrainedError(Error):
+    def __init__(self, message):
+        self.message = message
 
 '''
 FUNZIONI DI ATTIVAZIONE NOTE
 '''
 def identity(x):
     return x
-
-def sign(x):
-    if x >= 0:
-        return 1
-    return -1
 
 def sigmoid(x):
     return 1 / (1 + e**(-x))
@@ -51,6 +51,10 @@ def der(func):
     if func == my_tanh:
         return lambda x: 1 - tanh(x)**2
 
+# creiamo un dizionario che associa nome della funzione come stringa alla funzione stessa
+#  cosi quando creiamo la rete neurale in input gli diamo una lista di stringhe di funzioni di attivazione 
+dict_funct = {'sigmoid' : sigmoid, 'tanh': my_tanh, 'relu' : relu}
+
 
 def my_sum(matrix_list1, matrix_list2):
     return [matrix_list1[i] + matrix_list2[i] for i in range(len(matrix_list1))]
@@ -66,9 +70,6 @@ def norm(matrix_list):
                 norm += elem**2
     return sqrt(norm)
 
-def MSE(predicted_list, real_list):
-    error_list = [sum((predicted_list[i] - real_list[i])**2) for i in range(len(predicted_list))]
-    return sum(error_list) / len(error_list)
 '''
 Una rete neurale viene rappresentata con una lista di matrici, una per ogni layer diverso
 dall'input layer. Ogni matrice ha una riga per ogni neurone presente nel layer attuale e una colonna
@@ -88,13 +89,24 @@ NB: le funzioni di attivazione sono una in più degli hidden layer
 '''
 
 class NeuralNetwork:
-    def __init__(self, hidden_layers, act_functs, toll=0.01, learning_rate=0.04, max_iter=200, Lambda=0.000001, n_init=5):
-        if len(act_functs) != len(hidden_layers) + 1:
-            raise InputError()
+    def __init__(self, hidden_layers, act_functs, toll=0.01, learning_rate=0.04, max_iter=200, Lambda=0.000001, n_init=5, classification=False):
+        if len(act_functs) != len(hidden_layers):
+            raise InputError('Numero funzioni attivazione != Numero hidden layers')
         self.hidden_layers = hidden_layers
-        self.weights = []
+        # inizializzazione della lista di funzioni di att partendo dalla lista di stringhe usando dict_funct
+        # mettendo come ultima funzione di attivazione sigmoid se dobbiamo classificare
+        global dict_funct
+        try:
+            act_functs = [dict_funct[string] for string in act_functs]
+        except:
+            raise InputError('Una delle funzioni non è stata riconosciuta, lista funzioni valide: ' + str([func for func in dict_funct.keys()]))
+        if classification:
+            act_functs += [sigmoid]
+        else:
+            act_functs += [identity]
         self.act_functs = act_functs
-        self.deltas = []
+        self.weights = None
+        self.deltas = None
         self.toll = toll
         self.learning_rate = learning_rate
         self.max_iter = max_iter
@@ -102,6 +114,7 @@ class NeuralNetwork:
         self.n_init = n_init
 
     def forward(self, sample):
+    # ritorna un np.array con gli output
         # nel forward voglio che deltas rappresenti l'output di ogni neurone
         self.deltas[0] = sample
         input_arr = np.append(sample, 1)
@@ -117,6 +130,7 @@ class NeuralNetwork:
         return np.array([self.act_functs[-1](element) for element in output_arr])
 
     def backward(self, outputNN, target_arr):
+    # ritorna una lista di matrici (stessa forma dei layer) con il 'gradiente parziale'
         # dobbiamo calcolare la 'derivata parziale' per ogni peso,
         # quindi il risultato ha la stessa struttura dei layers; lo copio tanto poi sovrascrivo
         result = self.weights.copy()
@@ -225,18 +239,46 @@ class NeuralNetwork:
 
         self.weights = best_weights
         return min_error
-
     
     def predict(self, data):
+    # ritorna una lista di np.array con gli output per ogni pattern
+        # errore se la rete non è stata fittata --> non si conosce il numero di input e output
+        if not self.weights:
+            raise UntrainedError('La rete deve prima essere allenata!')
+        
         output_arr = []
         len_data = len(data)
         for i in range(len_data):
             outputNN = self.forward(data[i])
             output_arr.append([elem for elem in outputNN])
-
         return output_arr
 
-    def k_fold_cv(self, data, k=3):
+    def score(self, data_x, data_y):
+    # ritorna l'accuracy oppure il mean squared error
+        # errore se la rete non è stata fittata --> non si conosce il numero di input e output
+        if not self.weights:
+            raise UntrainedError('La rete deve prima essere allenata!')
+
+        predicted_y = self.predict(data_x)
+        # se dobbiamo classificare lo score è l'accuracy
+        if self.act_functs[-1] == sigmoid:
+            # arrotondiamo i valori ottenuti, ottenendo così solo 1 o 0
+            predicted_classes = [round(prediction) for prediction in predicted_y]
+            n_missclass = 0
+            for index, predicted_class in enumerate(predicted_classes):
+                if predicted_class != data_y[index]:
+                    n_missclass += 1
+            return n_missclass / len(data_y)
+        else:        
+            error_list = [sum((predicted_y[i] - data_y[i])**2) for i in range(len(predicted_y))]
+            return sum(error_list) / len(error_list)
+
+    def k_fold_cv(self, data, k=5):
+    # ritorna una lista di score (MSE/accuracy), uno per ogni tentativo
+        # errore se la rete non è stata fittata --> non si conosce il numero di input e output
+        if not self.weights:
+            raise UntrainedError('La rete deve prima essere allenata!')
+
         # calcoliamo la lunghezza di ogni divisione del dataset
         divided_data_size = len(data) // k
         # np.split divide il dataset a seconda degli indici che gli passiamo nella lista (secondo parametro)
@@ -259,15 +301,19 @@ class NeuralNetwork:
             test_x = [np.array(row[:-2]) for row in test_data]
             test_y = [np.array(row[-2:]) for row in test_data]
             # fit the neural network
-            train_error = self.fit(train_x, train_y)
-            # calculate test error
-            test_predict = self.predict(test_x)
-            mean_squared_error = MSE(test_predict, test_y)
-            error_list.append((train_error, mean_squared_error))
+            self.fit(train_x, train_y)
+            # calculate test error and append it to the result
+            test_error = self.score(test_x, test_y)
+            error_list.append(test_error)
         
         return error_list
 
     def MonteCarlo_cv(self, data, n_fit=5, test_percentage=0.7):
+    # ritorna una lista di score, come k-fold CV
+        # errore se la rete non è stata fittata --> non si conosce il numero di input e output
+        if not self.weights:
+            raise UntrainedError('La rete deve prima essere allenata!')
+
         error_list = []
         for _ in range(n_fit):
             shuffle(data)
@@ -281,11 +327,10 @@ class NeuralNetwork:
             test_x = [np.array(row[:-2]) for row in test_data]
             test_y = [np.array(row[-2:]) for row in test_data]
             # fit the neural network
-            train_error = self.fit(train_x, train_y)
+            self.fit(train_x, train_y)
             # calculate test error
-            test_predict = self.predict(test_x)
-            mean_squared_error = MSE(test_predict, test_y)
-            error_list.append((train_error, mean_squared_error))
+            test_error = self.score(test_x, test_y)
+            error_list.append(test_error)
         
         return error_list
 
@@ -293,22 +338,13 @@ class NeuralNetwork:
 
 ###################-----------PROVA--------###########################
 
-'''     PROVA BACKWARD
-NN = NeuralNetwork([2], 1*[sigmoid])
-NN.layers = [np.array([[0.15, 0.25, 0.35], [0.2, 0.3, 0.35]]), np.array([[0.4, 0.5, 0.6], [0.45, 0.55, 0.6]])]
-out = NN.forward(np.array([0.05, 0.1]))
-print(out)
-grad = NN.backward(out, np.array([0.8, 0.7]))
-print(grad)
-'''
-
 ''' PROVA MONK
 
 data = np.genfromtxt("Monk1.txt")
 target = [np.array(row[0]).astype('float32') for row in data]
 train_set = [np.array(row[1:-1]) for row in data]
 
-NN = NeuralNetwork((3, 3), 3*[my_tanh])
+NN = NeuralNetwork((3, 3), 2*['tanh'], classification=True)
 error = NN.fit(train_set, target)
 
 data_test = np.genfromtxt("TESTMONK1.txt")
@@ -346,11 +382,11 @@ test_x = [np.array(row[:-2]) for row in test_data]
 test_y = [np.array(row[-2:]) for row in test_data]
 # prova con parametri 'casuali'
 
-NN = NeuralNetwork( [10, 10], 2 * [my_tanh] + [identity],  learning_rate=0.0001, Lambda=0.5 )
+NN = NeuralNetwork( 2 * [10], 2 * ['tanh'],  learning_rate=0.0001, Lambda=0.5 )
 train_error = NN.fit(train_x, train_y)
 train_predict = NN.predict(train_x)
 test_predict = NN.predict(test_x)
-test_error = MSE(test_predict, test_y)
+test_error = NN.score(test_x, test_y)
 print(train_error)
 print(test_error)
 # plot dei risultati
@@ -358,8 +394,8 @@ print(test_error)
 plt.scatter([point[0] for point in train_y], [point[1] for point in train_y], c='b', alpha=0.05)
 plt.scatter([point[0] for point in train_predict], [point[1] for point in train_predict], c='r', alpha=0.5)
 # test
-plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='k', alpha=0.05)
-plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='y', alpha=0.5)
+plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='y')
+plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='k')
 plt.show()
 '''
 # creating train error list and test error list, in function of n_neurons and plotting results
@@ -367,7 +403,7 @@ train_error_list = []
 test_error_list = []
 n_neuron_list = range(2, 15)
 for n_neuron in n_neuron_list:
-    NN = NeuralNetwork((n_neuron), 2*[sigmoid])
+    NN = NeuralNetwork((n_neuron), ['sigmoid'])
     train_error = NN.fit(train_x, train_y)
     print(train_error)
     train_error_list.append(train_error)
@@ -384,13 +420,12 @@ plt.show()
 train_error_list = []
 test_error_list = []
 n_iteration_list = range(1, 200, 10)
-NN = NeuralNetwork((10, 10), 3*[sigmoid])
+NN = NeuralNetwork((10, 10), 2*['sigmoid'])
 for n_iteration in n_iteration_list:
     train_error = NN.fit(train_x, train_y, n_iteration)
     print(train_error)
     train_error_list.append(train_error)
-    test_predict = NN.predict(test_x)
-    test_error = MSE(test_predict, test_y)
+    test_error = NN.score(test_x, test_y)
     print(test_error)
     test_error_list.append(test_error)
 plt.plot(n_iteration_list, train_error_list)
