@@ -12,6 +12,7 @@ from math import e
 from math import sqrt
 from math import tanh
 from random import uniform
+from copy import deepcopy
 
 class Error(Exception):
     pass
@@ -133,7 +134,7 @@ class NeuralNetwork:
     # ritorna una lista di matrici (stessa forma dei layer) con il 'gradiente parziale'
         # dobbiamo calcolare la 'derivata parziale' per ogni peso,
         # quindi il risultato ha la stessa struttura dei layers; lo copio tanto poi sovrascrivo
-        result = self.weights.copy()
+        result = deepcopy(self.weights)
 
         # prima per l'output layer
         error_arr = target_arr - outputNN
@@ -192,7 +193,7 @@ class NeuralNetwork:
 
         # ora inizia l'algoritmo
         min_error = float('inf')
-        best_weights = self.weights
+        best_weights = deepcopy(self.weights)
         # i pesi vanno inizializzati più volte
         # ogni volta che li inizializziamo facciamo ripartire l'algoritmo vero e proprio
         # memorizziamo l'errore minimo di ogni tentativo e i pesi migliori
@@ -235,7 +236,7 @@ class NeuralNetwork:
 
             if error < min_error:
                 min_error = error
-                best_weights = self.weights 
+                best_weights = deepcopy(self.weights)
 
         self.weights = best_weights
         return min_error
@@ -380,8 +381,8 @@ train_x = [np.array(row[:-2]) for row in train_data]
 train_y = [np.array(row[-2:]) for row in train_data]
 test_x = [np.array(row[:-2]) for row in test_data]
 test_y = [np.array(row[-2:]) for row in test_data]
-# prova con parametri 'casuali'
 
+# prova con parametri 'casuali'
 NN = NeuralNetwork( 2 * [10], 2 * ['tanh'],  learning_rate=0.0001, Lambda=0.5 )
 train_error = NN.fit(train_x, train_y)
 train_predict = NN.predict(train_x)
