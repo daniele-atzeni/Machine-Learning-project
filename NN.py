@@ -90,7 +90,7 @@ NB: le funzioni di attivazione sono una in più degli hidden layer
 '''
 
 class NeuralNetwork:
-    def __init__(self, hidden_layers, act_functs, toll=0.1, learning_rate=0.000001, alpha = 0.1, minibatch_size=None, max_epochs=200, Lambda=0.001, min_increasing_score = 0.0000001, n_init=5, classification=False):
+    def __init__(self, hidden_layers, act_functs, toll=0.1, learning_rate=0.00001, alpha = 0, minibatch_size=None, max_epochs=200, Lambda=0.001, min_increasing_score = 0.0000001, n_init=5, classification=False):
         if len(act_functs) != len(hidden_layers):
             raise InputError('Numero funzioni attivazione != Numero hidden layers')
         self.hidden_layers = hidden_layers
@@ -208,6 +208,10 @@ class NeuralNetwork:
         if self.minibatch_size == None:
             self.minibatch_size = len(train_x)
 
+        ######### PROVA
+        first_learning_rate = self.learning_rate
+        #########
+
         # ora inizia l'algoritmo
         min_error = float('inf')
         # i pesi vanno inizializzati più volte
@@ -220,7 +224,11 @@ class NeuralNetwork:
             gradient = [np.zeros_like(layer) for layer in self.weights]
             self._init_weights()
 
-            for _ in range(self.max_epochs):
+            ####### PROVA
+            self.learning_rate = first_learning_rate
+            ##########
+
+            for n_epochs in range(self.max_epochs):
                 # calcolo del gradiente, sommando tutti i risultati di ogni backprop
                 for index, pattern in enumerate(train_x):
                     outputNN = self._forward(pattern)
@@ -238,14 +246,20 @@ class NeuralNetwork:
                 #print(curr_error)
                 #print(norm(gradient))
 
+                ################ PROVA
+                if prev_error < curr_error  and n_epochs > 5:
+                    self.learning_rate /= 2
+                ##################
+
                 # controlli per uscire dal ciclo:
-                # se l'errore non decrementa per 5 volte di fila usciamo (occhio a questa condizione);
+                # se l'errore non decrementa per 5 volte di fila usciamo (occhio a questa condizione, la usiamo solo 
+                # dopo aver fatto un po' di iterazioni, diciamo 10, perché all'inizio è troppo instabile);
                 # se la rete va già sufficientemente bene usciamo
-                if prev_error - curr_error < self.min_increasing_score:
+                if prev_error - curr_error < self.min_increasing_score and n_epochs > 10:
                     count_not_decreasing += 1
                 else:
                     count_not_decreasing = 0
-                if curr_error < self.toll:# or count_not_decreasing >= 10:
+                if curr_error < self.toll or count_not_decreasing >= 10:
                     break
 
             # alla fine dell'allenamento, se abbiamo ottenuto risultati migliori aggiorniamo min_error e best_weights
