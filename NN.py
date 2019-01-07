@@ -229,7 +229,7 @@ class NeuralNetwork:
                     gradient = my_sum(gradient, my_X_scal(-self.Lambda, self.weights))
                 
                 error = error / len(train_data)
-                #print(error)
+                print(error)
                 #print(norm(gradient))
                 #print(accuracy_err)
                 n_iter += 1
@@ -399,3 +399,16 @@ plt.scatter([point[0] for point in train_predict], [point[1] for point in train_
 plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='y')
 plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='k')
 plt.show()
+'''
+def funz_prevista(x):
+    if x <= -0.175:
+        return -2.31 * x - 2.1
+    else:
+        return 1.73 * x -1.4
+
+plt.scatter(train_data[:, -1], train_data[:, -2])
+X = np.arange(-2, 2, 0.01)
+Y = [funz_prevista(x) for x in X]
+plt.scatter(X, Y, alpha=0.5)
+plt.show()
+'''
