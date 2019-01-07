@@ -392,7 +392,7 @@ test_x = [np.array(row[:-2]) for row in test_data]
 test_y = [np.array(row[-2:]) for row in test_data]
 
 # prova con parametri 'casuali'
-NN = NeuralNetwork( 2 * [10], 2 * ['tanh'], learning_rate=0.0001, Lambda=0.5)
+NN = NeuralNetwork( 2 * [10], 2 * ['tanh'])
 NN.fit(train_x, train_y)
 train_error = NN.score(train_x, train_y)
 test_error = NN.score(test_x, test_y)
