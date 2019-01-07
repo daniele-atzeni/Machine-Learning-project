@@ -187,7 +187,7 @@ class NeuralNetwork:
                 for k in range(len(self.weights[i][j])):
                     self.weights[i][j][k] = uniform(-0.7, 0.7)
 
-    def _update_weights_and_gradient(self, gradient):
+    def _update_weights_and_return_new_gradient(self, gradient):
         # regularization
         if self.Lambda != 0:
             gradient = my_sum(gradient, my_prod_per_scal(-self.Lambda, self.weights))
@@ -195,9 +195,9 @@ class NeuralNetwork:
         self.weights = my_sum(self.weights, my_prod_per_scal(self.learning_rate, gradient))
         # reset the gradient, to 0 if no momentum(alpha = 0)
         # to alpha times the old gradient otherwise
-        gradient = my_prod_per_scal(self.alpha, gradient)
+        new_gradient = my_prod_per_scal(self.alpha, gradient)
 
-        return
+        return new_gradient
 
     def fit(self, train_x, train_y):
         # creiamo la lista di matrici dei pesi, ora che sappiamo le dimensioni dell'input e dell'output
@@ -229,15 +229,14 @@ class NeuralNetwork:
                     # dopo minibatch_size passi aggiorniamo i pesi e reinizializziamo il gradiente
                     # NB: la regolarizzazione viene fatta in update_weights_and_gradient
                     if index != 0 and index % self.minibatch_size == 0:
-                        self._update_weights_and_gradient(gradient)
+                        gradient = self._update_weights_and_return_new_gradient(gradient)
 
                 # dopo aver visto tutti i pattern bisogna nuovamente aggiornare i pesi
-                self._update_weights_and_gradient(gradient)
+                gradient = self._update_weights_and_return_new_gradient(gradient)
                 # calcolo errori
                 prev_error = curr_error
                 curr_error = self.score(train_x, train_y)
                 print(curr_error)
-                #print(norm(gradient))
 
                 # controlli per uscire dal ciclo:
                 # se l'errore non decrementa per 5 volte di fila usciamo (occhio a questa condizione, la usiamo solo 
