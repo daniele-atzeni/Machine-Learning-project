@@ -195,9 +195,7 @@ class NeuralNetwork:
         self.weights = my_sum(self.weights, my_prod_per_scal(self.learning_rate, gradient))
         # reset the gradient, to 0 if no momentum(alpha = 0)
         # to alpha times the old gradient otherwise
-        print(norm(gradient))
         gradient = my_prod_per_scal(self.alpha, gradient)
-        print(norm(gradient))
 
         return
 
@@ -238,7 +236,7 @@ class NeuralNetwork:
                 # calcolo errori
                 prev_error = curr_error
                 curr_error = self.score(train_x, train_y)
-                #print(curr_error)
+                print(curr_error)
                 #print(norm(gradient))
 
                 # controlli per uscire dal ciclo:
@@ -249,7 +247,7 @@ class NeuralNetwork:
                     count_not_decreasing += 1
                 else:
                     count_not_decreasing = 0
-                if curr_error < self.toll or count_not_decreasing >= 10:
+                if curr_error < self.toll:# or count_not_decreasing >= 10:
                     break
 
             # alla fine dell'allenamento, se abbiamo ottenuto risultati migliori aggiorniamo min_error e best_weights
