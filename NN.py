@@ -195,7 +195,10 @@ class NeuralNetwork:
         self.weights = my_sum(self.weights, my_prod_per_scal(self.learning_rate, gradient))
         # reset the gradient, to 0 if no momentum(alpha = 0)
         # to alpha times the old gradient otherwise
+        print(norm(gradient))
         gradient = my_prod_per_scal(self.alpha, gradient)
+        print(norm(gradient))
+
         return
 
     def fit(self, train_x, train_y):
@@ -392,7 +395,7 @@ test_x = [np.array(row[:-2]) for row in test_data]
 test_y = [np.array(row[-2:]) for row in test_data]
 
 # prova con parametri 'casuali'
-NN = NeuralNetwork( 2 * [10], 2 * ['tanh'])
+NN = NeuralNetwork( 2 * [10], 2 * ['tanh'], learning_rate=0.0001, Lambda=0.5)
 NN.fit(train_x, train_y)
 train_error = NN.score(train_x, train_y)
 test_error = NN.score(test_x, test_y)
