@@ -90,7 +90,7 @@ NB: le funzioni di attivazione sono una in più degli hidden layer
 '''
 
 class NeuralNetwork:
-    def __init__(self, hidden_layers, act_functs, toll=0.1, learning_rate=0.00001, alpha = 0, minibatch_size=None, max_epochs=200, Lambda=0.001, min_increasing_score = 0.0001, n_init=5, classification=False):
+    def __init__(self, hidden_layers, act_functs, toll=0.1, learning_rate=0.0005, alpha = 0, minibatch_size=None, max_epochs=200, Lambda=0.001, min_increasing_score = 0.0001, n_init=5, classification=False):
         if len(act_functs) != len(hidden_layers):
             raise InputError('Numero funzioni attivazione != Numero hidden layers')
         self.hidden_layers = hidden_layers
@@ -187,17 +187,13 @@ class NeuralNetwork:
                 for k in range(len(self.weights[i][j])):
                     self.weights[i][j][k] = uniform(-0.7, 0.7)
 
-    def _update_weights_and_return_new_gradient(self, gradient):
+    def _update_weights(self, gradient):
         # regularization
         if self.Lambda != 0:
             gradient = my_sum(gradient, my_prod_per_scal(-self.Lambda, self.weights))
         # update weights
         self.weights = my_sum(self.weights, my_prod_per_scal(self.learning_rate, gradient))
-        # reset the gradient, to 0 if no momentum(alpha = 0)
-        # to alpha times the old gradient otherwise
-        new_gradient = my_prod_per_scal(self.alpha, gradient)
-
-        return new_gradient
+        return 
 
     def fit(self, train_x, train_y):
         # creiamo la lista di matrici dei pesi, ora che sappiamo le dimensioni dell'input e dell'output
@@ -229,14 +225,37 @@ class NeuralNetwork:
                     # dopo minibatch_size passi aggiorniamo i pesi e reinizializziamo il gradiente
                     # NB: la regolarizzazione viene fatta in update_weights_and_gradient
                     if index != 0 and index % self.minibatch_size == 0:
-                        gradient = self._update_weights_and_return_new_gradient(gradient)
+                        self._update_weights(gradient)
+                        # reset the gradient, to 0 if no momentum(alpha = 0)
+                        # to alpha times the old gradient otherwise
+                        gradient = my_prod_per_scal(self.alpha, gradient)
+                
+                ################## PROVA #########
+                old_weights = deepcopy(self.weights)
+                ##################################
 
                 # dopo aver visto tutti i pattern bisogna nuovamente aggiornare i pesi
-                gradient = self._update_weights_and_return_new_gradient(gradient)
+                self._update_weights(gradient)
+                gradient = my_prod_per_scal(self.alpha, gradient)
                 # calcolo errori
                 prev_error = curr_error
                 curr_error = self.score(train_x, train_y)
                 print(curr_error)
+
+                ############# PROVA #########
+                i = 0
+                while prev_error < curr_error and n_epochs > 5:
+                    i += 1
+                    print('Numero volte nel while', i)
+                    self.weights = old_weights
+                    new_learning_rate = self.learning_rate / 2**i
+                    self.weights = my_sum(self.weights, my_prod_per_scal(new_learning_rate, gradient))
+                    curr_error = self.score(train_x, train_y)
+                    print(curr_error)
+                    print('learning rate:', new_learning_rate)
+
+
+                ##############################
 
                 # controlli per uscire dal ciclo:
                 # se l'errore non decrementa per 5 volte di fila usciamo (occhio a questa condizione, la usiamo solo 
@@ -392,7 +411,7 @@ test_x = [np.array(row[:-2]) for row in test_data]
 test_y = [np.array(row[-2:]) for row in test_data]
 
 # prova con parametri 'casuali'
-NN = NeuralNetwork( 2 * [10], 2 * ['tanh'])
+NN = NeuralNetwork( 4 * [30] + 2 * [10], 4 * ['tanh'] + 2 * ['relu'], alpha=0.3, n_init=1, learning_rate=0.0002)
 NN.fit(train_x, train_y)
 train_error = NN.score(train_x, train_y)
 test_error = NN.score(test_x, test_y)
