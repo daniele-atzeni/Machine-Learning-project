@@ -208,10 +208,6 @@ class NeuralNetwork:
         if self.minibatch_size == None:
             self.minibatch_size = len(train_x)
 
-        ######### PROVA
-        first_learning_rate = self.learning_rate
-        #########
-
         # ora inizia l'algoritmo
         min_error = float('inf')
         # i pesi vanno inizializzati più volte
@@ -223,10 +219,6 @@ class NeuralNetwork:
             count_not_decreasing = 0
             gradient = [np.zeros_like(layer) for layer in self.weights]
             self._init_weights()
-
-            ####### PROVA
-            self.learning_rate = first_learning_rate
-            ##########
 
             for n_epochs in range(self.max_epochs):
                 # calcolo del gradiente, sommando tutti i risultati di ogni backprop
@@ -245,11 +237,6 @@ class NeuralNetwork:
                 curr_error = self.score(train_x, train_y)
                 #print(curr_error)
                 #print(norm(gradient))
-
-                ################ PROVA
-                if prev_error < curr_error  and n_epochs > 5:
-                    self.learning_rate /= 2
-                ##################
 
                 # controlli per uscire dal ciclo:
                 # se l'errore non decrementa per 5 volte di fila usciamo (occhio a questa condizione, la usiamo solo 
