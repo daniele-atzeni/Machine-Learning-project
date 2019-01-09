@@ -229,10 +229,6 @@ class NeuralNetwork:
                         # reset the gradient, to 0 if no momentum(alpha = 0)
                         # to alpha times the old gradient otherwise
                         gradient = my_prod_per_scal(self.alpha, gradient)
-                
-                ################## PROVA #########
-                old_weights = deepcopy(self.weights)
-                ##################################
 
                 # dopo aver visto tutti i pattern bisogna nuovamente aggiornare i pesi
                 self._update_weights(gradient)
@@ -241,21 +237,6 @@ class NeuralNetwork:
                 prev_error = curr_error
                 curr_error = self.score(train_x, train_y)
                 print(curr_error)
-
-                ############# PROVA #########
-                i = 0
-                while prev_error < curr_error and n_epochs > 5:
-                    i += 1
-                    print('Numero volte nel while', i)
-                    self.weights = old_weights
-                    new_learning_rate = self.learning_rate / 2**i
-                    self.weights = my_sum(self.weights, my_prod_per_scal(new_learning_rate, gradient))
-                    curr_error = self.score(train_x, train_y)
-                    print(curr_error)
-                    print('learning rate:', new_learning_rate)
-
-
-                ##############################
 
                 # controlli per uscire dal ciclo:
                 # se l'errore non decrementa per 5 volte di fila usciamo (occhio a questa condizione, la usiamo solo 
@@ -396,34 +377,55 @@ print(error_test)
 ''' PROVA TRAINING SET '''
 # eliminiamo la colonna dell'indice
 data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
-# normalization of data
-data = (data - np.mean(data, axis=0)) / np.std(data, axis=0)
 # splitting in test and train, after we shuffle the dataset
 shuffle(data)
 test_percentage = 0.7
 n_train = round(len(data) * test_percentage)
 train_data = data[:n_train, :]
 test_data = data[n_train:, :]
+# normalization of data
+mean_arr = np.mean(train_data, axis=0)
+std_arr = np.std(train_data, axis=0)
+train_data = (data - mean_arr) / std_arr
+# splitting in train and validation
+test_percentage = 0.7
+n_train = round(len(data) * test_percentage)
+train_data = data[:n_train, :]
+val_data = data[n_train:, :]
 # splitting in train attributes, train target, test attr and test target
 train_x = [np.array(row[:-2]) for row in train_data]
 train_y = [np.array(row[-2:]) for row in train_data]
-test_x = [np.array(row[:-2]) for row in test_data]
-test_y = [np.array(row[-2:]) for row in test_data]
+val_x = [np.array(row[:-2]) for row in val_data]
+val_y = [np.array(row[-2:]) for row in val_data]
 
 # prova con parametri 'casuali'
-NN = NeuralNetwork( 4 * [30] + 2 * [10], 4 * ['tanh'] + 2 * ['relu'], alpha=0.3, n_init=1, learning_rate=0.0002)
+NN = NeuralNetwork( 3 * [20], 3 * ['tanh'], alpha=0.3, n_init=1, learning_rate=0.0002, minibatch_size=32)
 NN.fit(train_x, train_y)
 train_error = NN.score(train_x, train_y)
-test_error = NN.score(test_x, test_y)
+val_error = NN.score(val_x, val_y)
 print(train_error)
-print(test_error)
+print(val_error)
 # plot dei risultati
 train_predict = NN.predict(train_x)
-test_predict = NN.predict(test_x)
+val_predict = NN.predict(val_x)
 # training
 plt.scatter([point[0] for point in train_y], [point[1] for point in train_y], c='b', alpha=0.05)
 plt.scatter([point[0] for point in train_predict], [point[1] for point in train_predict], c='r', alpha=0.5)
-# test
-plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='y', alpha=0.5)
-plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='k', alpha=0.5)
+plt.title('train')
 plt.show()
+# validation
+plt.scatter([point[0] for point in val_y], [point[1] for point in val_y], c='y', alpha=0.5)
+plt.scatter([point[0] for point in val_predict], [point[1] for point in val_predict], c='k', alpha=0.5)
+plt.title('validation')
+plt.show()
+# test
+# normalizziamo poi denormalizziamo il test
+test_x = [np.array(row[:-2]) for row in test_data]
+test_y = [np.array(row[-2:]) for row in test_data]
+
+mean_test_arr = np.mean(test_x, axis=0)
+std_test_arr = np.std(test_x, axis=0)
+test_data = (test_x - mean_test_arr) / std_test_arr
+
+predicted_test = NN.predict(test_x)
+
