@@ -355,8 +355,8 @@ class NeuralNetwork:
 
 
 ###################-----------PROVA--------###########################
-
-''' PROVA MONK
+'''
+PROVA MONK
 
 data = np.genfromtxt("Monk1.txt")
 train_y = [np.array(row[0]).astype('float32') for row in data]
@@ -374,58 +374,119 @@ error_test = NN.score(test_x, test_y)
 print(error_test)
 '''
 
-''' PROVA TRAINING SET '''
+''' PROVA TRAINING SET 
 # eliminiamo la colonna dell'indice
 data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
 # splitting in test and train, after we shuffle the dataset
 shuffle(data)
-test_percentage = 0.7
-n_train = round(len(data) * test_percentage)
-train_data = data[:n_train, :]
-test_data = data[n_train:, :]
+train_and_val_percentage = 0.7
+n_train_and_val = round(len(data) * train_and_val_percentage)
+train_and_val_data = data[:n_train_and_val, :]
+test_data = data[n_train_and_val:, :]
 # normalization of data
-mean_arr = np.mean(train_data, axis=0)
-std_arr = np.std(train_data, axis=0)
-train_data = (data - mean_arr) / std_arr
+train_and_val_data = (train_and_val_data - np.mean(train_and_val_data, axis=0)) / np.std(train_and_val_data, axis=0)
 # splitting in train and validation
-test_percentage = 0.7
-n_train = round(len(data) * test_percentage)
-train_data = data[:n_train, :]
-val_data = data[n_train:, :]
+train_percentage = 0.7
+n_train = round(len(train_and_val_data) * train_percentage)
+train_data = train_and_val_data[:n_train, :]
+val_data = train_and_val_data[n_train:, :]
 # splitting in train attributes, train target, test attr and test target
 train_x = [np.array(row[:-2]) for row in train_data]
 train_y = [np.array(row[-2:]) for row in train_data]
 val_x = [np.array(row[:-2]) for row in val_data]
 val_y = [np.array(row[-2:]) for row in val_data]
-
 # prova con parametri 'casuali'
 NN = NeuralNetwork( 3 * [20], 3 * ['tanh'], alpha=0.3, n_init=1, learning_rate=0.0002, minibatch_size=32)
 NN.fit(train_x, train_y)
 train_error = NN.score(train_x, train_y)
 val_error = NN.score(val_x, val_y)
-print(train_error)
-print(val_error)
+print('train error', train_error)
+print('val error', val_error)
 # plot dei risultati
-train_predict = NN.predict(train_x)
-val_predict = NN.predict(val_x)
 # training
+train_predict = NN.predict(train_x)
 plt.scatter([point[0] for point in train_y], [point[1] for point in train_y], c='b', alpha=0.05)
 plt.scatter([point[0] for point in train_predict], [point[1] for point in train_predict], c='r', alpha=0.5)
 plt.title('train')
 plt.show()
 # validation
+val_predict = NN.predict(val_x)
 plt.scatter([point[0] for point in val_y], [point[1] for point in val_y], c='y', alpha=0.5)
 plt.scatter([point[0] for point in val_predict], [point[1] for point in val_predict], c='k', alpha=0.5)
 plt.title('validation')
 plt.show()
 # test
-# normalizziamo poi denormalizziamo il test
+# ricorda test_data è la porzione di dataset non toccata
 test_x = [np.array(row[:-2]) for row in test_data]
 test_y = [np.array(row[-2:]) for row in test_data]
-
-mean_test_arr = np.mean(test_x, axis=0)
-std_test_arr = np.std(test_x, axis=0)
-test_data = (test_x - mean_test_arr) / std_test_arr
-
-predicted_test = NN.predict(test_x)
-
+# calcolo valori per denormalizzare
+mean_test_y = np.mean(test_y, axis=0)
+std_test_y = np.std(test_y, axis=0)
+# normalizzazione attributi
+test_x = (test_x - np.mean(test_x, axis=0)) / np.std(test_x, axis=0)
+# l'output è normalizzato, bisogna denormalizzarlo
+predicted_normalized = NN.predict(test_x)
+# per denormalizzarlo viene piu comodo convertirlo in np.ndarray
+predicted_normalized = np.array(predicted_normalized)
+# denormalization
+test_predict = predicted_normalized * std_test_y + mean_test_y
+# compute error
+test_error = sum([sum(row) for row in (test_predict - test_y) ** 2]) / len(test_y)
+print('test_error', test_error)
+#plot result
+plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='y', alpha=0.5)
+plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='k', alpha=0.5)
+plt.title('test')
+plt.show()
+'''
+''' PROVA TRAINING SET NON NORMALIZZATO'''
+# eliminiamo la colonna dell'indice
+data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
+# splitting in test and train, after we shuffle the dataset
+shuffle(data)
+train_and_val_percentage = 0.7
+n_train_and_val = round(len(data) * train_and_val_percentage)
+train_and_val_data = data[:n_train_and_val, :]
+test_data = data[n_train_and_val:, :]
+# splitting in train and validation
+train_percentage = 0.7
+n_train = round(len(train_and_val_data) * train_percentage)
+train_data = train_and_val_data[:n_train, :]
+val_data = train_and_val_data[n_train:, :]
+# splitting in train attributes, train target, test attr and test target
+train_x = [np.array(row[:-2]) for row in train_data]
+train_y = [np.array(row[-2:]) for row in train_data]
+val_x = [np.array(row[:-2]) for row in val_data]
+val_y = [np.array(row[-2:]) for row in val_data]
+# prova con parametri 'casuali'
+NN = NeuralNetwork( 3 * [20], 3 * ['tanh'], alpha=0.3, n_init=1, learning_rate=0.0002, minibatch_size=32)
+NN.fit(train_x, train_y)
+train_error = NN.score(train_x, train_y)
+val_error = NN.score(val_x, val_y)
+print('train error', train_error)
+print('val error', val_error)
+# plot dei risultati
+# training
+train_predict = NN.predict(train_x)
+plt.scatter([point[0] for point in train_y], [point[1] for point in train_y], c='b', alpha=0.05)
+plt.scatter([point[0] for point in train_predict], [point[1] for point in train_predict], c='r', alpha=0.5)
+plt.title('train')
+plt.show()
+# validation
+val_predict = NN.predict(val_x)
+plt.scatter([point[0] for point in val_y], [point[1] for point in val_y], c='y', alpha=0.5)
+plt.scatter([point[0] for point in val_predict], [point[1] for point in val_predict], c='k', alpha=0.5)
+plt.title('validation')
+plt.show()
+# test
+# ricorda test_data è la porzione di dataset non toccata
+test_x = [np.array(row[:-2]) for row in test_data]
+test_y = [np.array(row[-2:]) for row in test_data]
+test_error = NN.score(test_x, test_y)
+print('test_error', test_error)
+#plot result
+test_predict = NN.predict(test_x)
+plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='y', alpha=0.5)
+plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='k', alpha=0.5)
+plt.title('test')
+plt.show()
