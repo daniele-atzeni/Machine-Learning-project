@@ -198,7 +198,7 @@ class NeuralNetwork:
     def fit(self, train_x, train_y):
         # creiamo la lista di matrici dei pesi, ora che sappiamo le dimensioni dell'input e dell'output
         # creiamo anche i delta, ora che sappiamo il numero di neuroni di ogni layer
-        layers_list = [len(train_x[0])] + list(self.hidden_layers) + [len(train_y[0])]
+        layers_list = [len(train_x[0])] + list(self.hidden_layers) + [train_y[0].size]
         self.weights = [np.empty((layers_list[i], layers_list[i-1] + 1), dtype='float32') for i in range(1, len(layers_list))]
         self.deltas = [np.empty(n_neuron, dtype='float32') for n_neuron in layers_list]
         # se minibatch_size = 0 ---> versione batch dell'algoritmo, quindi minibatch_size = len(train_x)
@@ -213,9 +213,9 @@ class NeuralNetwork:
         for n in range(self.n_init):
             print('inizializzazione', n + 1)
             curr_error = float('inf')
-            count_not_decreasing = 0
             gradient = [np.zeros_like(layer) for layer in self.weights]
             self._init_weights()
+            error_list = []
 
             for n_epochs in range(self.max_epochs):
                 # calcolo del gradiente, sommando tutti i risultati di ogni backprop
@@ -233,20 +233,12 @@ class NeuralNetwork:
                 # dopo aver visto tutti i pattern bisogna nuovamente aggiornare i pesi
                 self._update_weights(gradient)
                 gradient = my_prod_per_scal(self.alpha, gradient)
-                # calcolo errori
-                prev_error = curr_error
+                # calcolo errore
                 curr_error = self.score(train_x, train_y)
                 print(curr_error)
+                error_list.append(curr_error)
 
-                # controlli per uscire dal ciclo:
-                # se l'errore non decrementa per 5 volte di fila usciamo (occhio a questa condizione, la usiamo solo 
-                # dopo aver fatto un po' di iterazioni, diciamo 10, perché all'inizio è troppo instabile);
-                # se la rete va già sufficientemente bene usciamo
-                if prev_error - curr_error < self.min_increasing_score and n_epochs > 10:
-                    count_not_decreasing += 1
-                else:
-                    count_not_decreasing = 0
-                if curr_error < self.toll:# or count_not_decreasing >= 10:
+                if curr_error < self.toll:
                     break
 
             # alla fine dell'allenamento, se abbiamo ottenuto risultati migliori aggiorniamo min_error e best_weights
@@ -255,7 +247,7 @@ class NeuralNetwork:
                 best_weights = deepcopy(self.weights)
 
         self.weights = best_weights
-        return
+        return error_list, n_epochs
     
     def predict(self, data):
     # ritorna una lista di np.array con gli output per ogni pattern
@@ -280,10 +272,10 @@ class NeuralNetwork:
         # se dobbiamo classificare lo score è l'accuracy
         if self.act_functs[-1] == sigmoid:
             # arrotondiamo i valori ottenuti, ottenendo così una lista di array con 1 o 0
-            predicted_classes = [round(prediction) for prediction in predicted_y]
+            predicted_classes = [round(prediction[0]) for prediction in predicted_y]
             n_missclass = 0
             for index, predicted_array in enumerate(predicted_classes):
-                if predicted_array[0] != data_y[index][0]:
+                if predicted_array != data_y[index]:
                     n_missclass += 1
             return n_missclass / len(data_y)
         else:
@@ -356,14 +348,14 @@ class NeuralNetwork:
 
 ###################-----------PROVA--------###########################
 '''
-PROVA MONK
-
+PROVA MONK 
+'''
 data = np.genfromtxt("Monk1.txt")
 train_y = [np.array(row[0]).astype('float32') for row in data]
 train_x = [np.array(row[1:-1]) for row in data]
 
-NN = NeuralNetwork((3, 3), 2*['tanh'], classification=True)
-NN.fit(train_x, train_y)
+NN = NeuralNetwork((50, 50, 50), 3*['tanh'], classification=True, learning_rate=0.002, Lambda=0, toll=0.00000000000000001, n_init=1)
+error_list, n_epochs = NN.fit(train_x, train_y)
 train_error = NN.score(train_x, train_y)
 
 data_test = np.genfromtxt("TESTMONK1.txt")
@@ -372,7 +364,15 @@ test_x = [np.array(row[1:-1]) for row in data_test]
 
 error_test = NN.score(test_x, test_y)
 print(error_test)
-'''
+
+NN = NeuralNetwork((50, 50, 50), 3*['tanh'], classification=True, learning_rate=0.002, Lambda=0, toll=0.00000000000000001, n_init=1, minibatch_size=1)
+error_list2, n_epochs2 = NN.fit(train_x, train_y)
+
+plt.plot(range(n_epochs + 1), error_list)
+plt.plot(range(n_epochs2 + 1), error_list2)
+plt.legend(['batch', 'online'])
+plt.show()
+
 
 ''' PROVA TRAINING SET 
 # eliminiamo la colonna dell'indice
@@ -383,8 +383,6 @@ train_and_val_percentage = 0.7
 n_train_and_val = round(len(data) * train_and_val_percentage)
 train_and_val_data = data[:n_train_and_val, :]
 test_data = data[n_train_and_val:, :]
-# normalization of data
-train_and_val_data = (train_and_val_data - np.mean(train_and_val_data, axis=0)) / np.std(train_and_val_data, axis=0)
 # splitting in train and validation
 train_percentage = 0.7
 n_train = round(len(train_and_val_data) * train_percentage)
@@ -395,6 +393,9 @@ train_x = [np.array(row[:-2]) for row in train_data]
 train_y = [np.array(row[-2:]) for row in train_data]
 val_x = [np.array(row[:-2]) for row in val_data]
 val_y = [np.array(row[-2:]) for row in val_data]
+# normalization of data
+train_x = (train_x - np.mean(train_x, axis=0)) / np.std(train_x, axis=0)
+val_x = (val_x - np.mean(val_x, axis=0)) / np.std(val_x, axis=0)
 # prova con parametri 'casuali'
 NN = NeuralNetwork( 3 * [20], 3 * ['tanh'], alpha=0.3, n_init=1, learning_rate=0.0002, minibatch_size=32)
 NN.fit(train_x, train_y)
@@ -419,19 +420,11 @@ plt.show()
 # ricorda test_data è la porzione di dataset non toccata
 test_x = [np.array(row[:-2]) for row in test_data]
 test_y = [np.array(row[-2:]) for row in test_data]
-# calcolo valori per denormalizzare
-mean_test_y = np.mean(test_y, axis=0)
-std_test_y = np.std(test_y, axis=0)
 # normalizzazione attributi
 test_x = (test_x - np.mean(test_x, axis=0)) / np.std(test_x, axis=0)
-# l'output è normalizzato, bisogna denormalizzarlo
-predicted_normalized = NN.predict(test_x)
-# per denormalizzarlo viene piu comodo convertirlo in np.ndarray
-predicted_normalized = np.array(predicted_normalized)
-# denormalization
-test_predict = predicted_normalized * std_test_y + mean_test_y
+test_predict = NN.predict(test_x)
 # compute error
-test_error = sum([sum(row) for row in (test_predict - test_y) ** 2]) / len(test_y)
+test_error = NN.score(test_x, test_y)
 print('test_error', test_error)
 #plot result
 plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='y', alpha=0.5)
@@ -439,7 +432,7 @@ plt.scatter([point[0] for point in test_predict], [point[1] for point in test_pr
 plt.title('test')
 plt.show()
 '''
-''' PROVA TRAINING SET NON NORMALIZZATO'''
+''' PROVA TRAINING SET NON NORMALIZZATO
 # eliminiamo la colonna dell'indice
 data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
 # splitting in test and train, after we shuffle the dataset
@@ -490,3 +483,4 @@ plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='y
 plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='k', alpha=0.5)
 plt.title('test')
 plt.show()
+'''
