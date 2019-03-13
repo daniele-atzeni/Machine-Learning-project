@@ -217,6 +217,8 @@ class NeuralNetwork:
             self._init_weights()
             error_list = []
             test_error_list = []
+            acc_list = []
+            test_acc_list = []
 
             for n_epochs in range(self.max_epochs):
                 # calcolo del gradiente, sommando tutti i risultati di ogni backprop
@@ -240,6 +242,15 @@ class NeuralNetwork:
                 #print(curr_error)
                 error_list.append(curr_error)
                 test_error_list.append(curr_test_err)
+                
+                #############
+                pred_class = [round(elem[0]) for elem in self.predict(train_x)]
+                pred_class_test = [round(elem[0]) for elem in self.predict(test_x)]
+                train_acc = 1 - sum([1 if pred_class[i] != train_y[i][0] else 0 for i in range(len(pred_class))]) / len(pred_class)
+                test_acc = 1 - sum([1 if pred_class_test[i] != test_y[i][0] else 0 for i in range(len(pred_class_test))]) / len(pred_class_test)
+                acc_list.append(train_acc)
+                test_acc_list.append(test_acc)
+                ##############
 
                 if curr_error < self.toll:
                     break
@@ -250,7 +261,7 @@ class NeuralNetwork:
                 best_weights = deepcopy(self.weights)
 
         self.weights = best_weights
-        return error_list, n_epochs, test_error_list
+        return error_list, n_epochs, test_error_list, acc_list, test_acc_list
     
     def predict(self, data):
     # ritorna una lista di np.array con gli output per ogni pattern
@@ -352,17 +363,29 @@ test_y = data_test[:, 0]
 test_y = test_y.reshape((test_y.shape[0], 1))
 test_x = data_test[:, 1:-1]
 
-NN = NeuralNetwork((50, 50, 50), 3*['tanh'], classification=True, learning_rate=0.002, Lambda=0, toll=0.00000000000000001, n_init=1, max_epochs=400)
-error_list, n_epochs, test_error_list = NN.fit(train_x, train_y, test_x, test_y)
+NN = NeuralNetwork((30, 30, 30), 3*['tanh'], classification=True, learning_rate=0.002, Lambda=0, toll=0.00000000000000001, n_init=1, max_epochs=500)
+error_list, n_epochs, test_error_list, acc_list, test_acc_list = NN.fit(train_x, train_y, test_x, test_y)
 
-NN = NeuralNetwork((50, 50, 50), 3*['tanh'], classification=True, learning_rate=0.002, Lambda=0, toll=0.00000000000000001, n_init=1, minibatch_size=1, max_epochs=400)
-error_list2, n_epochs2, test_error_list2 = NN.fit(train_x, train_y, test_x, test_y)
+#NN = NeuralNetwork((50, 50, 50), 3*['tanh'], classification=True, learning_rate=0.002, Lambda=0, toll=0.00000000000000001, n_init=1, minibatch_size=1, max_epochs=300)
+#error_list2, n_epochs2, test_error_list2 = NN.fit(train_x, train_y, test_x, test_y)
 
 plt.plot(range(n_epochs + 1), error_list)
-plt.plot(range(n_epochs2 + 1), error_list2)
-plt.plot(range(n_epochs + 1), test_error_list)
-plt.plot(range(n_epochs2 + 1), test_error_list2)
-plt.legend(['batch', 'online', 'test batch', 'test online'])
+#plt.plot(range(n_epochs2 + 1), error_list2)
+plt.plot(range(n_epochs + 1), test_error_list, ls='dashed')
+#plt.plot(range(n_epochs2 + 1), test_error_list2)
+plt.legend(['train error', 'test error'])
+plt.title('MSE vs number of epochs')
+plt.xlabel('number of epochs')
+plt.ylabel('MSE')
+plt.show()
+plt.plot(range(n_epochs + 1), acc_list)
+#plt.plot(range(n_epochs2 + 1), error_list2)
+plt.plot(range(n_epochs + 1), test_acc_list, ls='dashed')
+#plt.plot(range(n_epochs2 + 1), test_error_list2)
+plt.legend(['train accuracy', 'test accuracy'])
+plt.title('accuracy vs number of epochs')
+plt.xlabel('number of epochs')
+plt.ylabel('accuracy')
 plt.show()
 
 
