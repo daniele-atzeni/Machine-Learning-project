@@ -243,16 +243,6 @@ class NeuralNetwork:
                 error_list.append(curr_error)
                 test_error_list.append(curr_test_err)
                 
-<<<<<<< HEAD
-                error = error / len(train_data)
-                print(error)
-                #print(norm(gradient))
-                #print(accuracy_err)
-                n_iter += 1
-
-            if error < min_error:
-                min_error = error
-=======
                 #############
                 pred_class = [round(elem[0]) for elem in self.predict(train_x)]
                 pred_class_test = [round(elem[0]) for elem in self.predict(test_x)]
@@ -268,7 +258,6 @@ class NeuralNetwork:
             # alla fine dell'allenamento, se abbiamo ottenuto risultati migliori aggiorniamo min_error e best_weights
             if curr_error < min_error:
                 min_error = curr_error
->>>>>>> 6c8c421fdc5417aed981cb08d8a7c6cb3ff25a26
                 best_weights = deepcopy(self.weights)
 
         self.weights = best_weights
