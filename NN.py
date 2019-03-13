@@ -90,7 +90,7 @@ NB: le funzioni di attivazione sono una in più degli hidden layer
 '''
 
 class NeuralNetwork:
-    def __init__(self, hidden_layers, act_functs, toll=0.1, learning_rate=0.0005, alpha = 0, minibatch_size=None, max_epochs=200, Lambda=0.001, min_increasing_score = 0.0001, n_init=5, classification=False):
+    def __init__(self, hidden_layers, act_functs, toll=0.1, learning_rate=0.0005, alpha = 0, minibatch_size=None, max_epochs=200, Lambda=0.001,  n_init=5, classification=False):
         if len(act_functs) != len(hidden_layers):
             raise InputError('Numero funzioni attivazione != Numero hidden layers')
         self.hidden_layers = hidden_layers
@@ -114,7 +114,6 @@ class NeuralNetwork:
         self.minibatch_size = minibatch_size
         self.max_epochs = max_epochs
         self.Lambda = Lambda
-        self.min_increasing_score = min_increasing_score
         self.n_init = n_init
 
     def _forward(self, sample):
