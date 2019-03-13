@@ -195,15 +195,15 @@ class NeuralNetwork:
         self.weights = my_sum(self.weights, my_prod_per_scal(self.learning_rate, gradient))
         return 
 
-    def fit(self, train_x, train_y):
+    def fit(self, train_x, train_y, test_x, test_y):
         # creiamo la lista di matrici dei pesi, ora che sappiamo le dimensioni dell'input e dell'output
         # creiamo anche i delta, ora che sappiamo il numero di neuroni di ogni layer
-        layers_list = [len(train_x[0])] + list(self.hidden_layers) + [train_y[0].size]
+        layers_list = [train_x.shape[1]] + list(self.hidden_layers) + [train_y.shape[1]]
         self.weights = [np.empty((layers_list[i], layers_list[i-1] + 1), dtype='float32') for i in range(1, len(layers_list))]
         self.deltas = [np.empty(n_neuron, dtype='float32') for n_neuron in layers_list]
-        # se minibatch_size = 0 ---> versione batch dell'algoritmo, quindi minibatch_size = len(train_x)
+        # se minibatch_size = None ---> versione batch dell'algoritmo, quindi minibatch_size = len(train_x)
         if self.minibatch_size == None:
-            self.minibatch_size = len(train_x)
+            self.minibatch_size = train_x.shape[0]
 
         # ora inizia l'algoritmo
         min_error = float('inf')
@@ -216,6 +216,7 @@ class NeuralNetwork:
             gradient = [np.zeros_like(layer) for layer in self.weights]
             self._init_weights()
             error_list = []
+            test_error_list = []
 
             for n_epochs in range(self.max_epochs):
                 # calcolo del gradiente, sommando tutti i risultati di ogni backprop
@@ -223,7 +224,7 @@ class NeuralNetwork:
                     outputNN = self._forward(pattern)
                     gradient = my_sum(gradient, self._backward(outputNN, train_y[index]))
                     # dopo minibatch_size passi aggiorniamo i pesi e reinizializziamo il gradiente
-                    # NB: la regolarizzazione viene fatta in update_weights_and_gradient
+                    # NB: la regolarizzazione viene fatta in update_weights
                     if index != 0 and index % self.minibatch_size == 0:
                         self._update_weights(gradient)
                         # reset the gradient, to 0 if no momentum(alpha = 0)
@@ -235,8 +236,10 @@ class NeuralNetwork:
                 gradient = my_prod_per_scal(self.alpha, gradient)
                 # calcolo errore
                 curr_error = self.score(train_x, train_y)
-                print(curr_error)
+                curr_test_err = self.score(test_x, test_y)
+                #print(curr_error)
                 error_list.append(curr_error)
+                test_error_list.append(curr_test_err)
 
                 if curr_error < self.toll:
                     break
@@ -247,7 +250,7 @@ class NeuralNetwork:
                 best_weights = deepcopy(self.weights)
 
         self.weights = best_weights
-        return error_list, n_epochs
+        return error_list, n_epochs, test_error_list
     
     def predict(self, data):
     # ritorna una lista di np.array con gli output per ogni pattern
@@ -256,11 +259,11 @@ class NeuralNetwork:
             raise UntrainedError('La rete deve prima essere allenata!')
         
         output_arr = []
-        len_data = len(data)
+        len_data = data.shape[0]
         for i in range(len_data):
             outputNN = self._forward(data[i])
-            output_arr.append([elem for elem in outputNN])
-        return output_arr
+            output_arr.append(outputNN)
+        return np.array(output_arr)
 
     def score(self, data_x, data_y):
     # ritorna l'accuracy oppure il mean squared error
@@ -269,19 +272,9 @@ class NeuralNetwork:
             raise UntrainedError('La rete deve prima essere allenata!')
 
         predicted_y = self.predict(data_x)
-        # se dobbiamo classificare lo score è l'accuracy
-        if self.act_functs[-1] == sigmoid:
-            # arrotondiamo i valori ottenuti, ottenendo così una lista di array con 1 o 0
-            predicted_classes = [round(prediction[0]) for prediction in predicted_y]
-            n_missclass = 0
-            for index, predicted_array in enumerate(predicted_classes):
-                if predicted_array != data_y[index]:
-                    n_missclass += 1
-            return n_missclass / len(data_y)
-        else:
-            # NB predicted_y è una lista di array, così come data_y
-            error_list = [sum((prediction - data_y[index])**2) for index, prediction in enumerate(predicted_y)]
-            return sum(error_list) / len(error_list)
+        # NB predicted_y è un array, così come data_y
+        error_list = [sum((prediction - data_y[index])**2) for index, prediction in enumerate(predicted_y)]
+        return sum(error_list) / len(error_list)
 
     def k_fold_cv(self, data, k=5):
     # ritorna una lista di score (MSE/accuracy), uno per ogni tentativo
@@ -351,26 +344,25 @@ class NeuralNetwork:
 PROVA MONK 
 '''
 data = np.genfromtxt("Monk1.txt")
-train_y = [np.array(row[0]).astype('float32') for row in data]
-train_x = [np.array(row[1:-1]) for row in data]
-
-NN = NeuralNetwork((50, 50, 50), 3*['tanh'], classification=True, learning_rate=0.002, Lambda=0, toll=0.00000000000000001, n_init=1)
-error_list, n_epochs = NN.fit(train_x, train_y)
-train_error = NN.score(train_x, train_y)
-
+train_y = data[:, 0]
+train_y = train_y.reshape((train_y.shape[0], 1))
+train_x = data[:, 1:-1]
 data_test = np.genfromtxt("TESTMONK1.txt")
-test_y = [np.array(row[0]).astype('float32') for row in data_test]
-test_x = [np.array(row[1:-1]) for row in data_test]
+test_y = data_test[:, 0]
+test_y = test_y.reshape((test_y.shape[0], 1))
+test_x = data_test[:, 1:-1]
 
-error_test = NN.score(test_x, test_y)
-print(error_test)
+NN = NeuralNetwork((50, 50, 50), 3*['tanh'], classification=True, learning_rate=0.002, Lambda=0, toll=0.00000000000000001, n_init=1, max_epochs=400)
+error_list, n_epochs, test_error_list = NN.fit(train_x, train_y, test_x, test_y)
 
-NN = NeuralNetwork((50, 50, 50), 3*['tanh'], classification=True, learning_rate=0.002, Lambda=0, toll=0.00000000000000001, n_init=1, minibatch_size=1)
-error_list2, n_epochs2 = NN.fit(train_x, train_y)
+NN = NeuralNetwork((50, 50, 50), 3*['tanh'], classification=True, learning_rate=0.002, Lambda=0, toll=0.00000000000000001, n_init=1, minibatch_size=1, max_epochs=400)
+error_list2, n_epochs2, test_error_list2 = NN.fit(train_x, train_y, test_x, test_y)
 
 plt.plot(range(n_epochs + 1), error_list)
 plt.plot(range(n_epochs2 + 1), error_list2)
-plt.legend(['batch', 'online'])
+plt.plot(range(n_epochs + 1), test_error_list)
+plt.plot(range(n_epochs2 + 1), test_error_list2)
+plt.legend(['batch', 'online', 'test batch', 'test online'])
 plt.show()
 
 
