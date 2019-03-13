@@ -238,7 +238,7 @@ class NeuralNetwork:
                 # calcolo errore
                 curr_error = self.score(train_x, train_y)
                 curr_test_err = self.score(test_x, test_y)
-                #print(curr_error)
+                print(curr_error)
                 error_list.append(curr_error)
                 test_error_list.append(curr_test_err)
                 
@@ -356,31 +356,24 @@ PROVA MONK
 data = np.genfromtxt("Monk1.txt")
 train_y = data[:, 0]
 train_y = train_y.reshape((train_y.shape[0], 1))
-train_x = data[:, 1:-1]
+train_x = (data[:, 1:-1] - 1) / np.array([3, 3, 2, 3, 4, 2])
+print(train_x.shape)
 data_test = np.genfromtxt("TESTMONK1.txt")
 test_y = data_test[:, 0]
 test_y = test_y.reshape((test_y.shape[0], 1))
-test_x = data_test[:, 1:-1]
+test_x = (data_test[:, 1:-1] - 1) / np.array([3, 3, 2, 3, 4, 2])
 
-NN = NeuralNetwork((30, 30, 30), 3*['tanh'], classification=True, learning_rate=0.002, Lambda=0, toll=0.00000000000000001, n_init=1, max_epochs=500)
+NN = NeuralNetwork(4 * [10], 4 * ['tanh'], classification=True, learning_rate=0.01, Lambda=0, alpha=0.9, toll=0.000001, n_init=1, max_epochs=200, minibatch_size=2)
 error_list, n_epochs, test_error_list, acc_list, test_acc_list = NN.fit(train_x, train_y, test_x, test_y)
-
-#NN = NeuralNetwork((50, 50, 50), 3*['tanh'], classification=True, learning_rate=0.002, Lambda=0, toll=0.00000000000000001, n_init=1, minibatch_size=1, max_epochs=300)
-#error_list2, n_epochs2, test_error_list2 = NN.fit(train_x, train_y, test_x, test_y)
-
 plt.plot(range(n_epochs + 1), error_list)
-#plt.plot(range(n_epochs2 + 1), error_list2)
 plt.plot(range(n_epochs + 1), test_error_list, ls='dashed')
-#plt.plot(range(n_epochs2 + 1), test_error_list2)
 plt.legend(['train error', 'test error'])
 plt.title('MSE vs number of epochs')
 plt.xlabel('number of epochs')
 plt.ylabel('MSE')
 plt.show()
 plt.plot(range(n_epochs + 1), acc_list)
-#plt.plot(range(n_epochs2 + 1), error_list2)
 plt.plot(range(n_epochs + 1), test_acc_list, ls='dashed')
-#plt.plot(range(n_epochs2 + 1), test_error_list2)
 plt.legend(['train accuracy', 'test accuracy'])
 plt.title('accuracy vs number of epochs')
 plt.xlabel('number of epochs')
