@@ -210,7 +210,7 @@ class NeuralNetwork:
         # ogni volta che li inizializziamo facciamo ripartire l'algoritmo vero e proprio
         # memorizziamo l'errore minimo di ogni tentativo e i pesi migliori
         for n in range(self.n_init):
-            print('inizializzazione', n + 1)
+            #print('inizializzazione', n + 1)
             curr_error = float('inf')
             gradient = [np.zeros_like(layer) for layer in self.weights]
             self._init_weights()
@@ -238,7 +238,7 @@ class NeuralNetwork:
                 # calcolo errore
                 curr_error = self.score(train_x, train_y)
                 curr_test_err = self.score(test_x, test_y)
-                print(curr_error)
+                #print(curr_error)
                 error_list.append(curr_error)
                 test_error_list.append(curr_test_err)
                 
@@ -397,30 +397,34 @@ test_x = data_test[:, 1:-1]
 train_x = ( train_x - np.array([min(train_x[:, i]) for i in range(train_x.shape[1])]) ) / np.array([max(train_x[:, i]) for i in range(train_x.shape[1])])
 test_x = ( test_x - np.array([min(test_x[:, i]) for i in range(test_x.shape[1])]) ) / np.array([max(test_x[:, i]) for i in range(test_x.shape[1])])
 # grid seach
-learning_rates =  
-alphas = 
-neurons_per_layer = 
-layers_numbers = 
+learning_rates = np.arange(0.01, 0.1, 0.01)
+alphas = np.arange(0.1, 1, 0.1)
+neurons_per_layer = [5, 10, 20, 30]
+layers_numbers = [3, 4]
 for neuron in neurons_per_layer:
     for layer in layers_numbers:
         for learning_rate in learning_rates:
             for alpha in alphas:
+                titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str(layer * ['tanh']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = 0' + ', alpha = ' + str(alpha) + ', minibatch_size = 8'
+                print(titolo)
                 NN = NeuralNetwork(layer * [neuron], layer * ['tanh'], classification=True, learning_rate=learning_rate, Lambda=0, alpha=alpha, toll=0.000001, n_init=1, max_epochs=100, minibatch_size=8)
                 error_list, n_epochs, test_error_list, acc_list, test_acc_list = NN.fit(train_x, train_y, test_x, test_y)
-                plt.plot(range(n_epochs + 1), error_list)
-                plt.plot(range(n_epochs + 1), test_error_list, ls='dashed')
-                plt.legend(['train error', 'test error'])
-                plt.title('MSE vs number of epochs')
-                plt.xlabel('number of epochs')
-                plt.ylabel('MSE')
-                plt.show()
-                plt.plot(range(n_epochs + 1), acc_list)
-                plt.plot(range(n_epochs + 1), test_acc_list, ls='dashed')
-                plt.legend(['train accuracy', 'test accuracy'])
-                plt.title('accuracy vs number of epochs')
-                plt.xlabel('number of epochs')
-                plt.ylabel('accuracy')
-                plt.show()
+                print('train error = ' + str(error_list[-1]), 'test_error = ' + str(test_error_list[-1]), 'train accuracy = ' + str(acc_list[-1]), 'test accuracy = ' + str(test_acc_list[-1]))
+                if (test_acc_list[-1] >= 0.85):
+                    plt.plot(range(n_epochs + 1), error_list)
+                    plt.plot(range(n_epochs + 1), test_error_list, ls='dashed')
+                    plt.legend(['train error', 'test error'])
+                    plt.title('MSE '+ titolo)
+                    plt.xlabel('number of epochs')
+                    plt.ylabel('MSE')
+                    plt.show()
+                    plt.plot(range(n_epochs + 1), acc_list)
+                    plt.plot(range(n_epochs + 1), test_acc_list, ls='dashed')
+                    plt.legend(['train accuracy', 'test accuracy'])
+                    plt.title('accuracy '+ titolo)
+                    plt.xlabel('number of epochs')
+                    plt.ylabel('accuracy')
+                    plt.show()
 
 '''
 PROVA MONK 3
