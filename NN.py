@@ -351,7 +351,7 @@ class NeuralNetwork:
 
 ###################-----------PROVA--------###########################
 '''
-PROVA MONK 
+PROVA MONK 1
 
 data = np.genfromtxt("monk1.txt")
 train_y = data[:, 0]
