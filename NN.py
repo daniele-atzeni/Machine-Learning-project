@@ -455,17 +455,17 @@ for neuron in neurons_per_layer:
                     for  minibatch_size in minibatch_sizes:
                         titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str(layer * ['tanh']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch_size = ' + str(minibatch_size)
                         print(titolo)
-                        NN = NeuralNetwork(layer * [neuron], layer * ['tanh'], classification=True, learning_rate=learning_rate, Lambda=Lambda, alpha=alpha, toll=0.000001, n_init=1, max_epochs=100, minibatch_size=minibatch_size)
+                        NN = NeuralNetwork(layer * [neuron], layer * ['tanh'], classification=True, learning_rate=learning_rate, Lambda=Lambda, alpha=alpha, toll=0.000001, n_init=1, max_epochs=150, minibatch_size=minibatch_size)
                         error_list, n_epochs, test_error_list, acc_list, test_acc_list = NN.fit(train_x, train_y, test_x, test_y)
                         print('train error = ' + str(error_list[-1]), 'test_error = ' + str(test_error_list[-1]), 'train accuracy = ' + str(acc_list[-1]), 'test accuracy = ' + str(test_acc_list[-1]))
-                        if (test_acc_list[-1] >= 0.8):
+                        if (test_acc_list[-1] >= 0.85):
                             plt.plot(range(n_epochs + 1), error_list)
                             plt.plot(range(n_epochs + 1), test_error_list, ls='dashed')
                             plt.legend(['train error', 'test error'])
                             plt.title('MSE')
                             plt.xlabel('number of epochs')
                             plt.ylabel('MSE')
-                            plt.savefig('MSE ' + titolo + '.png')
+                            plt.savefig('C:/Users/danie/Desktop/Daniele/Laurea magistrale/Machine Learning/Machine-Learning-project/plot/MSE_' + titolo +'.png')
                             plt.close()
                             plt.plot(range(n_epochs + 1), acc_list)
                             plt.plot(range(n_epochs + 1), test_acc_list, ls='dashed')
@@ -473,7 +473,7 @@ for neuron in neurons_per_layer:
                             plt.title('accuracy')
                             plt.xlabel('number of epochs')
                             plt.ylabel('accuracy')
-                            plt.savefig('accuracy ' + titolo + '.png')
+                            plt.savefig('C:/Users/danie/Desktop/Daniele/Laurea magistrale/Machine Learning/Machine-Learning-project/plot/accuracy_' + titolo +'.png')
                             plt.close()
 
 ''' 
