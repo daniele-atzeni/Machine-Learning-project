@@ -353,12 +353,12 @@ class NeuralNetwork:
 '''
 PROVA MONK 
 
-data = np.genfromtxt("Monk1.txt")
+data = np.genfromtxt("monk1.txt")
 train_y = data[:, 0]
 train_y = train_y.reshape((train_y.shape[0], 1))
 train_x = (data[:, 1:-1] - 1) / np.array([3, 3, 2, 3, 4, 2])
 print(train_x.shape)
-data_test = np.genfromtxt("TESTMONK1.txt")
+data_test = np.genfromtxt("test_monk1.txt")
 test_y = data_test[:, 0]
 test_y = test_y.reshape((test_y.shape[0], 1))
 test_x = (data_test[:, 1:-1] - 1) / np.array([3, 3, 2, 3, 4, 2])
@@ -384,12 +384,12 @@ plt.show()
 '''
 PROVA MONK 2
 '''
-data = np.genfromtxt("Monk1.txt")
+data = np.genfromtxt("monk1.txt")
 train_y = data[:, 0]
 train_y = train_y.reshape((train_y.shape[0], 1))
 train_x = (data[:, 1:-1] - 1) / np.array([3, 3, 2, 3, 4, 2])
 print(train_x.shape)
-data_test = np.genfromtxt("TESTMONK1.txt")
+data_test = np.genfromtxt("test_monk1.txt")
 test_y = data_test[:, 0]
 test_y = test_y.reshape((test_y.shape[0], 1))
 test_x = (data_test[:, 1:-1] - 1) / np.array([3, 3, 2, 3, 4, 2])
