@@ -445,7 +445,7 @@ learning_rates = np.arange(0.01, 0.1, 0.01)
 lambdas = np.arange(0.1, 1, 0.1)
 alphas = np.arange(0.1, 1, 0.1)
 neurons_per_layer = [5, 10, 20, 30]
-minibatch_sizes = [None, 2, 4, 8, 16, 32]
+minibatch_sizes = [None, 2, 4, 8, 16, 32, 64, 128]
 layers_numbers = [3, 4]
 for neuron in neurons_per_layer:
     for layer in layers_numbers:
