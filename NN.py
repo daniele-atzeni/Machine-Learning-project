@@ -396,23 +396,31 @@ test_x = data_test[:, 1:-1]
 # normalizzazione min-max
 train_x = ( train_x - np.array([min(train_x[:, i]) for i in range(train_x.shape[1])]) ) / np.array([max(train_x[:, i]) for i in range(train_x.shape[1])])
 test_x = ( test_x - np.array([min(test_x[:, i]) for i in range(test_x.shape[1])]) ) / np.array([max(test_x[:, i]) for i in range(test_x.shape[1])])
-# allenamento
-NN = NeuralNetwork(4 * [10], 4 * ['tanh'], classification=True, learning_rate=0.01, Lambda=0, alpha=0.9, toll=0.000001, n_init=1, max_epochs=200, minibatch_size=2)
-error_list, n_epochs, test_error_list, acc_list, test_acc_list = NN.fit(train_x, train_y, test_x, test_y)
-plt.plot(range(n_epochs + 1), error_list)
-plt.plot(range(n_epochs + 1), test_error_list, ls='dashed')
-plt.legend(['train error', 'test error'])
-plt.title('MSE vs number of epochs')
-plt.xlabel('number of epochs')
-plt.ylabel('MSE')
-plt.show()
-plt.plot(range(n_epochs + 1), acc_list)
-plt.plot(range(n_epochs + 1), test_acc_list, ls='dashed')
-plt.legend(['train accuracy', 'test accuracy'])
-plt.title('accuracy vs number of epochs')
-plt.xlabel('number of epochs')
-plt.ylabel('accuracy')
-plt.show()
+# grid seach
+learning_rates =  
+alphas = 
+neurons_per_layer = 
+layers_numbers = 
+for neuron in neurons_per_layer:
+    for layer in layers_numbers:
+        for learning_rate in learning_rates:
+            for alpha in alphas:
+                NN = NeuralNetwork(layer * [neuron], layer * ['tanh'], classification=True, learning_rate=learning_rate, Lambda=0, alpha=alpha, toll=0.000001, n_init=1, max_epochs=100, minibatch_size=8)
+                error_list, n_epochs, test_error_list, acc_list, test_acc_list = NN.fit(train_x, train_y, test_x, test_y)
+                plt.plot(range(n_epochs + 1), error_list)
+                plt.plot(range(n_epochs + 1), test_error_list, ls='dashed')
+                plt.legend(['train error', 'test error'])
+                plt.title('MSE vs number of epochs')
+                plt.xlabel('number of epochs')
+                plt.ylabel('MSE')
+                plt.show()
+                plt.plot(range(n_epochs + 1), acc_list)
+                plt.plot(range(n_epochs + 1), test_acc_list, ls='dashed')
+                plt.legend(['train accuracy', 'test accuracy'])
+                plt.title('accuracy vs number of epochs')
+                plt.xlabel('number of epochs')
+                plt.ylabel('accuracy')
+                plt.show()
 
 '''
 PROVA MONK 3
