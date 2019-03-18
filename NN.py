@@ -9,6 +9,7 @@ import numpy as np
 from numpy.random import shuffle
 import matplotlib.pyplot as plt
 from math import e
+from math import exp
 from math import sqrt
 from math import tanh
 from random import uniform
@@ -116,7 +117,7 @@ NB: le funzioni di attivazione sono una in più degli hidden layer
 '''
 
 class NeuralNetwork:
-    def __init__(self, hidden_layers, act_functs, toll=0.1, learning_rate=0.0005, alpha = 0, minibatch_size=None, max_epochs=200, Lambda=0.001,  n_init=5, classification=False):
+    def __init__(self, hidden_layers, act_functs, toll=0.1, learning_rate=0.0005, type_lr='const' , alpha = 0, minibatch_size=None, max_epochs=200, Lambda=0.001,  n_init=5, classification=False):
         if len(act_functs) != len(hidden_layers):
             raise InputError('Numero funzioni attivazione != Numero hidden layers')
         self.hidden_layers = hidden_layers
@@ -135,7 +136,9 @@ class NeuralNetwork:
         self.weights = None
         self.deltas = None
         self.toll = toll
-        self.learning_rate = learning_rate
+        self.learning_rate = None
+        self.initial_lrate = learning_rate
+        self.type_lr = type_lr
         self.alpha = alpha
         self.minibatch_size = minibatch_size
         self.max_epochs = max_epochs
@@ -246,6 +249,19 @@ class NeuralNetwork:
             test_acc_list = []
 
             for n_epochs in range(self.max_epochs):
+                # inizializzo / decremento il learning rate
+                # constant
+                if type(self.type_lr) == str:
+                    self.learning_rate = self.initial_lrate
+                # step decay
+                if type(self.type_lr) == tuple:
+                    decay_factor = self.type_lr[0]
+                    step_size = self.type_lr[1]
+                    self.learning_rate = self.initial_lrate * (decay_factor ** np.floor(n_epochs / step_size))
+                # exponential decay
+                if type(self.type_lr) == float:
+                    self.learning_rate = self.initial_lrate * exp(-(self.type_lr * n_epochs))
+
                 # calcolo del gradiente, sommando tutti i risultati di ogni backprop
                 for index, pattern in enumerate(train_x):
                     outputNN = self._forward(pattern)
@@ -264,10 +280,10 @@ class NeuralNetwork:
                 # calcolo errore
                 curr_error = self.score(train_x, train_y)
                 curr_test_err = self.score(test_x, test_y)
-                #print(curr_error)
+                print(curr_error)
                 error_list.append(curr_error)
                 test_error_list.append(curr_test_err)
-                
+
                 #############
                 pred_class = [round(elem[0]) for elem in self.predict(train_x)]
                 pred_class_test = [round(elem[0]) for elem in self.predict(test_x)]
@@ -281,7 +297,7 @@ class NeuralNetwork:
                     break
 
             # alla fine dell'allenamento, se abbiamo ottenuto risultati migliori aggiorniamo min_error e best_weights
-            if curr_error < min_error:
+            if curr_error <= min_error:
                 min_error = curr_error
                 best_weights = deepcopy(self.weights)
 
@@ -378,7 +394,7 @@ class NeuralNetwork:
 ###################-----------MAIN--------###########################
 '''
 PROVA MONK 1
-'''
+
 data = np.genfromtxt("monk1.txt")
 train_y = data[:, 0]
 train_y = train_y.reshape((train_y.shape[0], 1))
@@ -426,7 +442,7 @@ for neuron in neurons_per_layer:
                         plt.show()
                         #plt.savefig('C:/Users/danie/Desktop/Daniele/Laurea magistrale/Machine Learning/Machine-Learning-project/plot/accuracy_' + titolo +'.png')
                         plt.close()
-
+'''
 '''
 PROVA MONK 2
 
@@ -472,7 +488,7 @@ for neuron in neurons_per_layer:
 '''
 '''
 PROVA MONK 3
-'''
+
 data = np.genfromtxt("monk3.txt")
 train_y = data[:, 0]
 train_y = train_y.reshape((train_y.shape[0], 1))
@@ -521,10 +537,10 @@ for neuron in neurons_per_layer:
                         #plt.savefig('C:/Users/danie/Desktop/Daniele/Laurea magistrale/Machine Learning/Machine-Learning-project/plot/accuracy_' + titolo +'.png')
                         plt.close()
 
-
+'''
 ''' 
 PROVA TRAINING SET
-
+'''
 # eliminiamo la colonna dell'indice
 data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
 # splitting in test and train, after we shuffle the dataset
@@ -539,36 +555,43 @@ n_train = round(len(train_and_val_data) * train_percentage)
 train_data = train_and_val_data[:n_train, :]
 val_data = train_and_val_data[n_train:, :]
 # splitting in train attributes, train target, test attr and test target
-train_x = [np.array(row[:-2]) for row in train_data]
-train_y = [np.array(row[-2:]) for row in train_data]
-val_x = [np.array(row[:-2]) for row in val_data]
-val_y = [np.array(row[-2:]) for row in val_data]
+train_x = train_data[:, :-2]
+train_y = train_data[:, -2:]
+val_x = val_data[:, :-2]
+val_y = val_data[:, -2:]
 # normalization of data
 train_x = (train_x - np.mean(train_x, axis=0)) / np.std(train_x, axis=0)
 val_x = (val_x - np.mean(val_x, axis=0)) / np.std(val_x, axis=0)
-# normalizzazione min-max
-#train_x = ( train_x - np.array([min(train_x[:, i]) for i in range(train_x.shape[1])]) ) / np.array([max(train_x[:, i]) for i in range(train_x.shape[1])])
-#test_x = ( test_x - np.array([min(test_x[:, i]) for i in range(test_x.shape[1])]) ) / np.array([max(test_x[:, i]) for i in range(test_x.shape[1])])
-# prova con parametri 'casuali'
-NN = NeuralNetwork( 3 * [20], 3 * ['tanh'], alpha=0.3, n_init=1, learning_rate=0.0002, minibatch_size=32)
-NN.fit(train_x, train_y)
-train_error = NN.score(train_x, train_y)
-val_error = NN.score(val_x, val_y)
-print('train error', train_error)
-print('val error', val_error)
-# plot dei risultati
-# training
-train_predict = NN.predict(train_x)
-plt.scatter([point[0] for point in train_y], [point[1] for point in train_y], c='b', alpha=0.05)
-plt.scatter([point[0] for point in train_predict], [point[1] for point in train_predict], c='r', alpha=0.5)
-plt.title('train')
-plt.show()
-# validation
-val_predict = NN.predict(val_x)
-plt.scatter([point[0] for point in val_y], [point[1] for point in val_y], c='y', alpha=0.5)
-plt.scatter([point[0] for point in val_predict], [point[1] for point in val_predict], c='k', alpha=0.5)
-plt.title('validation')
-plt.show()
+# grid seach
+learning_rates = [0.00001]
+lambdas = [0.1]
+alphas = [0.8]
+neurons_per_layer = [20]
+minibatch_sizes = [None]
+layers_numbers = [2]
+type_lr = 'constant'
+for neuron in neurons_per_layer:
+    for layer in layers_numbers:
+        for learning_rate in learning_rates:
+            for Lambda in lambdas:
+                for alpha in alphas:
+                    for  minibatch_size in minibatch_sizes:
+                        titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str((layer) * ['tanh']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch_size = ' + str(minibatch_size)
+                        print(titolo)
+                        NN = NeuralNetwork(layer * [neuron], (layer) * ['tanh'], learning_rate=learning_rate, type_lr=type_lr, Lambda=Lambda, alpha=alpha, toll=0.000001, n_init=1, max_epochs=300, minibatch_size=minibatch_size)
+                        error_list, n_epochs, test_error_list, acc_list, test_acc_list = NN.fit(train_x, train_y, val_x, val_y)
+                        print('train error = ' + str(error_list[-1]), 'test_error = ' + str(test_error_list[-1]))
+                        plt.plot(range(n_epochs + 1), error_list)
+                        plt.plot(range(n_epochs + 1), test_error_list, ls='dashed')
+                        plt.ylim(top=10)
+                        plt.legend(['train error', 'test error'])
+                        plt.title('MSE')
+                        plt.xlabel('number of epochs')
+                        plt.ylabel('MSE')
+                        plt.show()
+                        #plt.savefig('C:/Users/danie/Desktop/Daniele/Laurea magistrale/Machine Learning/Machine-Learning-project/plot/MSE_' + titolo +'.png')
+                        plt.close()
+'''
 # test
 # ricorda test_data è la porzione di dataset non toccata
 test_x = [np.array(row[:-2]) for row in test_data]
@@ -585,7 +608,9 @@ plt.scatter([point[0] for point in test_predict], [point[1] for point in test_pr
 plt.title('test')
 plt.show()
 '''
-''' PROVA TRAINING SET NON NORMALIZZATO
+''' 
+PROVA TRAINING SET NON NORMALIZZATO
+
 # eliminiamo la colonna dell'indice
 data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
 # splitting in test and train, after we shuffle the dataset
