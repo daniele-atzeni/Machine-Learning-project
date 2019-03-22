@@ -1,26 +1,64 @@
 from NN import *
 
+def one_of_k(data):
+    dist_values = np.array([np.unique(data[:, i]) for i in range(data.shape[1])])
+    new_data = []
+    First_rec = True
+    for record in data:
+        new_record = []
+        First = True
+        indice = 0
+        for attribute in record:
+            new_attribute = np.zeros(len(dist_values[indice]), dtype=int)
+            for j in range(len(dist_values[indice])):
+                if dist_values[indice][j] == attribute:
+                    new_attribute[j] += 1
+            if First:
+                new_record = new_attribute
+                First = False
+            else:
+                new_record = np.concatenate((new_record, new_attribute), axis=0)
+            indice += 1
+        if First_rec:
+            new_data = np.array([new_record])
+            First_rec = False
+        else:
+            new_data = np.concatenate((new_data, np.array([new_record])), axis=0)
+    return new_data
+
 '''
 PROVA MONK 1
 '''
 data = np.genfromtxt("monk1.txt")
-train_y = data[:, 0]
+# splitting in test and train, after we shuffle the dataset
+shuffle(data)
+train_percentage = 0.8
+n_train = round(data.shape[0] * train_percentage)
+train = data[:n_train, :]
+val = data[n_train:, :]
+# splitting in attributes and class
+train_y = train[:, 0]
 train_y = train_y.reshape((train_y.shape[0], 1))
-train_x = data[:, 1:-1]
+train_x = train[:, 1:-1]
+val_y = val[:, 0]
+val_y = val_y.reshape((val_y.shape[0], 1))
+val_x = val[:, 1:-1]
+# test_data
 data_test = np.genfromtxt("test_monk1.txt")
 test_y = data_test[:, 0]
 test_y = test_y.reshape((test_y.shape[0], 1))
 test_x = data_test[:, 1:-1]
 # one of k
 train_x = one_of_k(train_x)
+val_x = one_of_k(val_x)
 test_x = one_of_k(test_x)
 # grid seach
-learning_rates = [0.05]
-lambdas = [0]
-alphas = [0.9]
-neurons_per_layer = [10]
-minibatch_sizes = [32]
-layers_numbers = [1]
+learning_rates = [0.07] #[0.01, 0.03, 0.07, 0.1]
+lambdas = [0] #[0]
+alphas = [0.9] #[0.7, 0.8, 0.9]
+neurons_per_layer = [10] #[5, 10, 20]
+minibatch_sizes = [64] #[64, None]
+layers_numbers = [2] #[1, 2, 3]
 for neuron in neurons_per_layer:
     for layer in layers_numbers:
         for learning_rate in learning_rates:
@@ -29,27 +67,28 @@ for neuron in neurons_per_layer:
                     for  minibatch_size in minibatch_sizes:
                         titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str(layer * ['tanh']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch_size = ' + str(minibatch_size)
                         print(titolo)
-                        NN = NeuralNetwork(layer * [neuron], layer * ['tanh'], classification=True, learning_rate=learning_rate, Lambda=Lambda, alpha=alpha, toll=0.000001, n_init=1, max_epochs=150, minibatch_size=minibatch_size)
-                        error_list, n_epochs, test_error_list, acc_list, test_acc_list = NN.fit(train_x, train_y, test_x, test_y)
+                        NN = NeuralNetwork(layer * [neuron], layer * ['tanh'], classification=True, learning_rate=learning_rate, Lambda=Lambda, alpha=alpha, toll=0.000001, n_init=1, max_epochs=100, minibatch_size=minibatch_size, algorithm='SGD')
+                        error_list, n_epochs, test_error_list, acc_list, test_acc_list = NN.fit(train_x, train_y, val_x, val_y)
                         print('train error = ' + str(error_list[-1]), 'test_error = ' + str(test_error_list[-1]), 'train accuracy = ' + str(acc_list[-1]), 'test accuracy = ' + str(test_acc_list[-1]))
-                        plt.plot(range(n_epochs + 1), error_list)
-                        plt.plot(range(n_epochs + 1), test_error_list, ls='dashed')
-                        plt.legend(['train error', 'test error'])
-                        plt.title('MSE')
-                        plt.xlabel('number of epochs')
-                        plt.ylabel('MSE')
-                        plt.show()
-                        #plt.savefig('C:/Users/danie/Desktop/Daniele/Laurea magistrale/Machine Learning/Machine-Learning-project/plot/MSE_' + titolo +'.png')
-                        plt.close()
-                        plt.plot(range(n_epochs + 1), acc_list)
-                        plt.plot(range(n_epochs + 1), test_acc_list, ls='dashed')
-                        plt.legend(['train accuracy', 'test accuracy'])
-                        plt.title('accuracy')
-                        plt.xlabel('number of epochs')
-                        plt.ylabel('accuracy')
-                        plt.show()
-                        #plt.savefig('C:/Users/danie/Desktop/Daniele/Laurea magistrale/Machine Learning/Machine-Learning-project/plot/accuracy_' + titolo +'.png')
-                        plt.close()
+                        if test_acc_list[-1] == 1:
+                            plt.plot(range(n_epochs + 1), error_list)
+                            plt.plot(range(n_epochs + 1), test_error_list, ls='dashed')
+                            plt.legend(['train error', 'test error'])
+                            plt.title('MSE VS number of epochs')
+                            plt.xlabel('number of epochs')
+                            plt.ylabel('MSE')
+                            plt.show()
+                            #plt.savefig('C:/Users/danie/Desktop/Daniele/Laurea magistrale/Machine Learning/Machine-Learning-project/plot/' + titolo +'_MSE.png')
+                            plt.close()
+                            plt.plot(range(n_epochs + 1), acc_list)
+                            plt.plot(range(n_epochs + 1), test_acc_list, ls='dashed')
+                            plt.legend(['train accuracy', 'test accuracy'])
+                            plt.title('accuracy VS number of epochs')
+                            plt.xlabel('number of epochs')
+                            plt.ylabel('accuracy')
+                            plt.show()
+                            #plt.savefig('C:/Users/danie/Desktop/Daniele/Laurea magistrale/Machine Learning/Machine-Learning-project/plot/' + titolo +'_accuracy.png')
+                            plt.close()
 
 '''
 PROVA MONK 2
@@ -98,23 +137,35 @@ for neuron in neurons_per_layer:
 PROVA MONK 3
 
 data = np.genfromtxt("monk3.txt")
-train_y = data[:, 0]
+# splitting in test and train, after we shuffle the dataset
+shuffle(data)
+train_percentage = 0.8
+n_train = round(data.shape[0] * train_percentage)
+train = data[:n_train, :]
+val = data[n_train:, :]
+# splitting in attributes and class
+train_y = train[:, 0]
 train_y = train_y.reshape((train_y.shape[0], 1))
-train_x = data[:, 1:-1]
+train_x = train[:, 1:-1]
+val_y = val[:, 0]
+val_y = val_y.reshape((val_y.shape[0], 1))
+val_x = val[:, 1:-1]
+# test_data
 data_test = np.genfromtxt("test_monk3.txt")
 test_y = data_test[:, 0]
 test_y = test_y.reshape((test_y.shape[0], 1))
 test_x = data_test[:, 1:-1]
 # one of k
 train_x = one_of_k(train_x)
+val_x = one_of_k(val_x)
 test_x = one_of_k(test_x)
 # grid seach
-learning_rates = [0.03]
-lambdas = [0.2]
-alphas = [0.7]
-neurons_per_layer = [20]
-minibatch_sizes = [128]
-layers_numbers = [1]
+learning_rates = [0.01] #[0.01, 0.03, 0.07, 0.1]
+lambdas = [0.2] #[0.01, 0.1, 0.2]
+alphas = [0.8] #[0.7, 0.8, 0.9]
+neurons_per_layer = [10] #[5, 10, 20]
+minibatch_sizes = [64] #[64, None]
+layers_numbers = [3] #[1, 2, 3]
 for neuron in neurons_per_layer:
     for layer in layers_numbers:
         for learning_rate in learning_rates:
@@ -123,26 +174,26 @@ for neuron in neurons_per_layer:
                     for  minibatch_size in minibatch_sizes:
                         titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str(layer * ['tanh']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch_size = ' + str(minibatch_size)
                         print(titolo)
-                        NN = NeuralNetwork(layer * [neuron], layer * ['tanh'], classification=True, learning_rate=learning_rate, Lambda=Lambda, alpha=alpha, toll=0.000001, n_init=1, max_epochs=200, minibatch_size=minibatch_size)
-                        error_list, n_epochs, test_error_list, acc_list, test_acc_list = NN.fit(train_x, train_y, test_x, test_y)
+                        NN = NeuralNetwork(layer * [neuron], layer * ['tanh'], classification=True, learning_rate=learning_rate, Lambda=Lambda, alpha=alpha, toll=0.000001, n_init=1, max_epochs=150, minibatch_size=minibatch_size, algorithm='SGD')
+                        error_list, n_epochs, test_error_list, acc_list, test_acc_list = NN.fit(train_x, train_y, val_x, val_y)
                         print('train error = ' + str(error_list[-1]), 'test_error = ' + str(test_error_list[-1]), 'train accuracy = ' + str(acc_list[-1]), 'test accuracy = ' + str(test_acc_list[-1]))
-                        plt.plot(range(n_epochs + 1), error_list)
-                        plt.plot(range(n_epochs + 1), test_error_list, ls='dashed')
-                        plt.legend(['train error', 'test error'])
-                        plt.title('MSE')
-                        plt.xlabel('number of epochs')
-                        plt.ylabel('MSE')
-                        plt.show()
-                        #plt.savefig('C:/Users/danie/Desktop/Daniele/Laurea magistrale/Machine Learning/Machine-Learning-project/plot/MSE_' + titolo +'.png')
-                        plt.close()
-                        plt.plot(range(n_epochs + 1), acc_list)
-                        plt.plot(range(n_epochs + 1), test_acc_list, ls='dashed')
-                        plt.legend(['train accuracy', 'test accuracy'])
-                        plt.title('accuracy')
-                        plt.xlabel('number of epochs')
-                        plt.ylabel('accuracy')
-                        plt.show()
-                        #plt.savefig('C:/Users/danie/Desktop/Daniele/Laurea magistrale/Machine Learning/Machine-Learning-project/plot/accuracy_' + titolo +'.png')
-                        plt.close()
-
+                        if test_acc_list[-1] >= 0.94 and acc_list[-1] >= 0.95 and test_acc_list[-1] < acc_list[-1]:
+                            plt.plot(range(n_epochs + 1), error_list)
+                            plt.plot(range(n_epochs + 1), test_error_list, ls='dashed')
+                            plt.legend(['train error', 'test error'])
+                            plt.title('MSE VS number of epochs')
+                            plt.xlabel('number of epochs')
+                            plt.ylabel('MSE')
+                            plt.show()
+                            #plt.savefig('C:/Users/danie/Desktop/Daniele/Laurea magistrale/Machine Learning/Machine-Learning-project/plot/' + titolo +'_MSE.png')
+                            plt.close()
+                            plt.plot(range(n_epochs + 1), acc_list)
+                            plt.plot(range(n_epochs + 1), test_acc_list, ls='dashed')
+                            plt.legend(['train accuracy', 'test accuracy'])
+                            plt.title('accuracy VS number of epochs')
+                            plt.xlabel('number of epochs')
+                            plt.ylabel('accuracy')
+                            plt.show()
+                            #plt.savefig('C:/Users/danie/Desktop/Daniele/Laurea magistrale/Machine Learning/Machine-Learning-project/plot/' + titolo +'_accuracy.png')
+                            plt.close()
 '''

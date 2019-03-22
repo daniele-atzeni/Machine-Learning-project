@@ -6,13 +6,12 @@ Created on Tue Nov  6 14:20:03 2018
 """
 
 import numpy as np
-from numpy.random import shuffle, randn
+from numpy.random import shuffle, randn, uniform
 import matplotlib.pyplot as plt
 from math import e
 from math import exp
 from math import sqrt
 from math import tanh
-from random import uniform
 from copy import deepcopy
 
 class Error(Exception):
@@ -84,32 +83,6 @@ def norm(matrix_list):
                 norm += elem**2
     return sqrt(norm)
 
-def one_of_k(data):
-    dist_values = np.array([np.unique(data[:, i]) for i in range(data.shape[1])])
-    new_data = []
-    First_rec = True
-    for record in data:
-        new_record = []
-        First = True
-        indice = 0
-        for attribute in record:
-            new_attribute = np.zeros(len(dist_values[indice]), dtype=int)
-            for j in range(len(dist_values[indice])):
-                if dist_values[indice][j] == attribute:
-                    new_attribute[j] += 1
-            if First:
-                new_record = new_attribute
-                First = False
-            else:
-                new_record = np.concatenate((new_record, new_attribute), axis=0)
-            indice += 1
-        if First_rec:
-            new_data = np.array([new_record])
-            First_rec = False
-        else:
-            new_data = np.concatenate((new_data, np.array([new_record])), axis=0)
-    return new_data
-
 '''
 Una rete neurale viene rappresentata con una lista di matrici, una per ogni layer diverso
 dall'input layer. Ogni matrice ha una riga per ogni neurone presente nel layer attuale e una colonna
@@ -129,7 +102,7 @@ NB: le funzioni di attivazione sono una in più degli hidden layer
 '''
 
 class NeuralNetwork:
-    def __init__(self, hidden_layers, act_functs, toll=0.1, learning_rate=0.0005, type_lr='const' , alpha = 0, minibatch_size=None, max_epochs=200, Lambda=0.001,  n_init=5, classification=False, algorithm='ADAM'):
+    def __init__(self, hidden_layers, act_functs, toll=0.1, learning_rate=0.0005, type_lr='constant' , alpha = 0, minibatch_size=None, max_epochs=200, Lambda=0.001,  n_init=5, classification=False, algorithm='ADAM'):
         if len(act_functs) != len(hidden_layers):
             raise InputError('Numero funzioni attivazione != Numero hidden layers')
         self.hidden_layers = hidden_layers
@@ -226,9 +199,8 @@ class NeuralNetwork:
         for i in range(len(self.weights)):
             for j in range(len(self.weights[i])):
                 for k in range(len(self.weights[i][j])):
-                    #self.weights[i][j][k] = uniform(-0.7, 0.7)
-                    self.weights[i][j][k] = randn() * np.sqrt(1 / len(self.weights[i][j]))
-
+                    self.weights[i][j][k] = uniform(-0.7, 0.7)
+                    
     def _update_weights(self, gradient):
         # regularization
         if self.Lambda != 0:
@@ -247,6 +219,8 @@ class NeuralNetwork:
         # ora inizia l'algoritmo
         if self.algorithm == 'ADAM':
             min_error = float('inf')
+            if self.minibatch_size == None:
+                self.minibatch_size = train_x.shape[0]
             # i pesi vanno inizializzati più volte
             # ogni volta che li inizializziamo facciamo ripartire l'algoritmo vero e proprio
             # memorizziamo l'errore minimo di ogni tentativo e i pesi migliori
@@ -285,8 +259,23 @@ class NeuralNetwork:
                     for index, pattern in enumerate(train_x):
                         outputNN = self._forward(pattern)
                         gradient = my_sum(gradient, self._backward(outputNN, train_y[index]))
+                        if index != 0 and index % self.minibatch_size == 0:
+                            if self.Lambda != 0:
+                                gradient = my_sum(gradient, my_prod_per_scal(-self.Lambda, self.weights))
+                            t = t + 1
+                            m = my_sum(my_prod_per_scal(beta1, m), my_prod_per_scal((1 - beta1), gradient))
+                            v = my_sum(my_prod_per_scal(beta2, v), my_prod_per_scal((1 - beta2), my_prod(gradient, gradient)))
+                            m_ = my_prod_per_scal(1 / (1 - beta1**t), m)
+                            v_ = my_prod_per_scal(1 / (1 - beta2**t), v)
+                            num = my_prod_per_scal(self.learning_rate, m_)
+                            div = my_sum_per_scal(eps, my_sqrt(v_))
+                            self.weights = my_sum(self.weights, my_div(num, div))
 
+                            gradient = my_prod_per_scal(self.alpha, gradient)
+                    
                     # dopo aver visto tutti i pattern bisogna aggiornare i pesi
+                    if self.Lambda != 0:
+                        gradient = my_sum(gradient, my_prod_per_scal(-self.Lambda, self.weights))
                     t = t + 1
                     m = my_sum(my_prod_per_scal(beta1, m), my_prod_per_scal((1 - beta1), gradient))
                     v = my_sum(my_prod_per_scal(beta2, v), my_prod_per_scal((1 - beta2), my_prod(gradient, gradient)))
@@ -296,13 +285,13 @@ class NeuralNetwork:
                     div = my_sum_per_scal(eps, my_sqrt(v_))
                     self.weights = my_sum(self.weights, my_div(num, div))
 
-                    gradient = [np.zeros_like(layer) for layer in self.weights]
+                    gradient = my_prod_per_scal(0, gradient)
 
 
                     # calcolo errore
                     curr_error = self.score(train_x, train_y)
                     curr_test_err = self.score(test_x, test_y)
-                    print(curr_error)
+                    #print(curr_error)
                     error_list.append(curr_error)
                     test_error_list.append(curr_test_err)
 
@@ -326,7 +315,7 @@ class NeuralNetwork:
             self.weights = best_weights
             return error_list, n_epochs, test_error_list, acc_list, test_acc_list
         
-        if self.algorithm == 'SGE':
+        if self.algorithm == 'SGD':
             # se minibatch_size = None ---> versione batch dell'algoritmo, quindi minibatch_size = len(train_x)
             if self.minibatch_size == None:
                 self.minibatch_size = train_x.shape[0]
@@ -349,7 +338,7 @@ class NeuralNetwork:
                 for n_epochs in range(self.max_epochs):
                     # inizializzo / decremento il learning rate
                     # constant
-                    if type(self.type_lr) == str:
+                    if self.type_lr == 'constant':
                         self.learning_rate = self.initial_lrate
                     # step decay
                     if type(self.type_lr) == tuple:
@@ -378,7 +367,7 @@ class NeuralNetwork:
                     # calcolo errore
                     curr_error = self.score(train_x, train_y)
                     curr_test_err = self.score(test_x, test_y)
-                    print(curr_error)
+                    #print(curr_error)
                     error_list.append(curr_error)
                     test_error_list.append(curr_test_err)
 
@@ -488,6 +477,11 @@ class NeuralNetwork:
         return error_list
 '''
 
+def funzione(x):
+    if x < -17.825393:
+        return -1.1334002237288088 * (x + 28.835118) - 2.531668 
+    return 0.8568463444857496 * (x + 9.091727) - 7.759054
+
 
 if __name__ == '__main__':
 
@@ -495,12 +489,12 @@ if __name__ == '__main__':
     data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
     # splitting in test and train, after we shuffle the dataset
     shuffle(data)
-    train_and_val_percentage = 0.7
+    train_and_val_percentage = 0.75
     n_train_and_val = round(len(data) * train_and_val_percentage)
     train_and_val_data = data[:n_train_and_val, :]
     test_data = data[n_train_and_val:, :]
     # splitting in train and validation
-    train_percentage = 0.7
+    train_percentage = 0.75
     n_train = round(len(train_and_val_data) * train_percentage)
     train_data = train_and_val_data[:n_train, :]
     val_data = train_and_val_data[n_train:, :]
@@ -509,33 +503,33 @@ if __name__ == '__main__':
     train_y = train_data[:, -2:]
     val_x = val_data[:, :-2]
     val_y = val_data[:, -2:]
-    # normalization of data
+    # data normalization
     # Z-score normalization
-    #train_x = (train_x - np.mean(train_x, axis=0)) / np.std(train_x, axis=0)
-    #val_x = (val_x - np.mean(val_x, axis=0)) / np.std(val_x, axis=0)
+    train_x = (train_x - np.mean(train_x, axis=0)) / np.std(train_x, axis=0)
+    val_x = (val_x - np.mean(val_x, axis=0)) / np.std(val_x, axis=0)
     # normalization in [-1, 1]
-    for i in range(train_x.shape[1]):
-        train_x[:, i] = 2 * ((train_x[:, i] - train_x[:, i].min()) / (train_x[:, i].max() - train_x[:, i].min())) - 1
-        val_x[:, i] = 2 * ((val_x[:, i] - val_x[:, i].min()) / (val_x[:, i].max() - val_x[:, i].min())) - 1
+    #for i in range(train_x.shape[1]):
+    #    train_x[:, i] = 0.8 * ((train_x[:, i] - train_x[:, i].min()) / (train_x[:, i].max() - train_x[:, i].min())) + 0.1
+    #    val_x[:, i] = 0.8 * ((val_x[:, i] - val_x[:, i].min()) / (val_x[:, i].max() - val_x[:, i].min())) + 0.1
     # grid seach
-    learning_rates = [0.05]
-    lambdas = [0.6]
-    alphas = [0.9]
-    neurons_per_layer = [25]
-    minibatch_sizes = [None]
-    layers_numbers = [3]
-    type_lr = [0.5, 100]
+    learning_rates = [0.01]
+    lambdas = [0.001]
+    alphas = [0]
+    neurons_per_layer = [5]
+    minibatch_sizes = [32]
+    layers_numbers = [2]
+    type_lr = 'constant'
     for neuron in neurons_per_layer:
         for layer in layers_numbers:
             for learning_rate in learning_rates:
                 for Lambda in lambdas:
                     for alpha in alphas:
                         for  minibatch_size in minibatch_sizes:
-                            titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str((layer) * ['tanh']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch_size = ' + str(minibatch_size)
+                            titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str((layer) * ['tanh']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch_size = ' + str(minibatch_size) + ', algorithm = SGD'
                             print(titolo)
-                            NN = NeuralNetwork(layer * [neuron], (layer) * ['tanh'], learning_rate=learning_rate, type_lr=type_lr, Lambda=Lambda, alpha=alpha, toll=0.000001, n_init=1, max_epochs=750, minibatch_size=minibatch_size)
+                            NN = NeuralNetwork((layer) * [neuron], (layer) * ['tanh'], learning_rate=learning_rate, type_lr=type_lr, Lambda=Lambda, alpha=alpha, toll=0.000001, n_init=1, max_epochs=200, minibatch_size=minibatch_size, algorithm='SGD')
                             error_list, n_epochs, test_error_list, acc_list, test_acc_list = NN.fit(train_x, train_y, val_x, val_y)
-                            print('train error = ' + str(error_list[-1]), 'test_error = ' + str(test_error_list[-1]))
+                            print('train error = ' + str(error_list[-1]), 'test_error = ' + str(test_error_list[-1]), 'min test err = ' + str(min(test_error_list)))
                             plt.plot(range(n_epochs + 1), error_list)
                             plt.plot(range(n_epochs + 1), test_error_list, ls='dashed')
                             plt.ylim((-0.5, 10))
@@ -546,7 +540,7 @@ if __name__ == '__main__':
                             plt.show()
                             #plt.savefig('C:/Users/danie/Desktop/Daniele/Laurea magistrale/Machine Learning/Machine-Learning-project/plot/MSE_' + titolo +'.png')
                             plt.close()
-
+    
     '''
     # test
     # ricorda test_data è la porzione di dataset non toccata
@@ -563,9 +557,7 @@ if __name__ == '__main__':
     plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='k', alpha=0.5)
     plt.title('test')
     plt.show()
-    '''
-    ''' 
-    PROVA TRAINING SET NON NORMALIZZATO
+    
 
     # eliminiamo la colonna dell'indice
     data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
@@ -581,40 +573,53 @@ if __name__ == '__main__':
     train_data = train_and_val_data[:n_train, :]
     val_data = train_and_val_data[n_train:, :]
     # splitting in train attributes, train target, test attr and test target
-    train_x = [np.array(row[:-2]) for row in train_data]
-    train_y = [np.array(row[-2:]) for row in train_data]
-    val_x = [np.array(row[:-2]) for row in val_data]
-    val_y = [np.array(row[-2:]) for row in val_data]
-    # prova con parametri 'casuali'
-    NN = NeuralNetwork( 3 * [20], 3 * ['tanh'], alpha=0.3, n_init=1, learning_rate=0.0002, minibatch_size=32)
-    NN.fit(train_x, train_y)
-    train_error = NN.score(train_x, train_y)
-    val_error = NN.score(val_x, val_y)
-    print('train error', train_error)
-    print('val error', val_error)
-    # plot dei risultati
-    # training
-    train_predict = NN.predict(train_x)
-    plt.scatter([point[0] for point in train_y], [point[1] for point in train_y], c='b', alpha=0.05)
-    plt.scatter([point[0] for point in train_predict], [point[1] for point in train_predict], c='r', alpha=0.5)
-    plt.title('train')
-    plt.show()
-    # validation
-    val_predict = NN.predict(val_x)
-    plt.scatter([point[0] for point in val_y], [point[1] for point in val_y], c='y', alpha=0.5)
-    plt.scatter([point[0] for point in val_predict], [point[1] for point in val_predict], c='k', alpha=0.5)
-    plt.title('validation')
-    plt.show()
-    # test
-    # ricorda test_data è la porzione di dataset non toccata
-    test_x = [np.array(row[:-2]) for row in test_data]
-    test_y = [np.array(row[-2:]) for row in test_data]
-    test_error = NN.score(test_x, test_y)
-    print('test_error', test_error)
-    #plot result
-    test_predict = NN.predict(test_x)
-    plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='y', alpha=0.5)
-    plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='k', alpha=0.5)
-    plt.title('test')
-    plt.show()
-    '''
+    train_x = train_data[:, :-2]
+    train_y = train_data[:, -1].reshape((train_data.shape[0], 1))
+    val_x = val_data[:, :-2]
+    val_y = val_data[:, -1].reshape((val_data.shape[0], 1))
+    Y_tr = train_data[:, -2:]
+    Y = val_data[:, -2:]
+    # data normalization
+    # Z-score normalization
+    train_x = (train_x - np.mean(train_x, axis=0)) / np.std(train_x, axis=0)
+    val_x = (val_x - np.mean(val_x, axis=0)) / np.std(val_x, axis=0)
+    # normalization in [-1, 1]
+    #for i in range(train_x.shape[1]):
+    #    train_x[:, i] = 2 * ((train_x[:, i] - train_x[:, i].min()) / (train_x[:, i].max() - train_x[:, i].min())) - 1
+    #    val_x[:, i] = 2 * ((val_x[:, i] - val_x[:, i].min()) / (val_x[:, i].max() - val_x[:, i].min())) - 1
+    # grid seach
+    learning_rates = [0.005]
+    lambdas = [0.0]
+    alphas = [0]
+    neurons_per_layer = [20]
+    minibatch_sizes = [32]
+    layers_numbers = [1]
+    type_lr = 'constant'
+    for neuron in neurons_per_layer:
+        for layer in layers_numbers:
+            for learning_rate in learning_rates:
+                for Lambda in lambdas:
+                    for alpha in alphas:
+                        for  minibatch_size in minibatch_sizes:
+                            titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str((layer) * ['tanh']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch_size = ' + str(minibatch_size) + ', algorithm = ADAM'
+                            print(titolo)
+                            NN = NeuralNetwork((layer) * [neuron], (layer) * ['tanh'], learning_rate=learning_rate, type_lr=type_lr, Lambda=Lambda, alpha=alpha, toll=0.000001, n_init=1, max_epochs=100, minibatch_size=minibatch_size, algorithm='ADAM')
+                            error_list, n_epochs, test_error_list, acc_list, test_acc_list = NN.fit(train_x, train_y, val_x, val_y)
+                            print('train error = ' + str(error_list[-1]), 'test_error = ' + str(test_error_list[-1]), 'min test err = ' + str(min(test_error_list)))
+                            print('errore previsto train = ' + str(error_list[-1] + funzione(error_list[-1])), '    errore previsto test = ' + str(test_error_list[-1] + funzione(test_error_list[-1])))
+                            plt.plot(range(n_epochs + 1), error_list)
+                            plt.plot(range(n_epochs + 1), test_error_list, ls='dashed')
+                            plt.ylim((-0.5, 10))
+                            plt.legend(['train error', 'test error'])
+                            plt.title('MSE')
+                            plt.xlabel('number of epochs')
+                            plt.ylabel('MSE')
+                            plt.show()
+                            #plt.savefig('C:/Users/danie/Desktop/Daniele/Laurea magistrale/Machine Learning/Machine-Learning-project/plot/MSE_' + titolo +'.png')
+                            plt.close()
+                            pred_tr = np.array([np.array([funzione(y), y]) for y in NN.predict(train_x)])
+                            pred_tr = pred_tr.reshape((pred_tr.shape[0], pred_tr.shape[1]))
+                            pred = np.array([np.array([funzione(y), y]) for y in NN.predict(val_x)])
+                            pred = pred.reshape((pred.shape[0], pred.shape[1]))
+                            print('ERRORE TRAIN = ', sum(sum((Y_tr - pred_tr)**2)) / Y_tr.shape[0], '   ERRORE TEST = ', sum(sum((Y - pred)**2)) / Y.shape[0])
+'''
