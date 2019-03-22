@@ -28,7 +28,7 @@ def one_of_k(data):
 
 '''
 PROVA MONK 1
-'''
+
 data = np.genfromtxt("monk1.txt")
 # splitting in test and train, after we shuffle the dataset
 shuffle(data)
@@ -89,7 +89,7 @@ for neuron in neurons_per_layer:
                             plt.show()
                             #plt.savefig('C:/Users/danie/Desktop/Daniele/Laurea magistrale/Machine Learning/Machine-Learning-project/plot/' + titolo +'_accuracy.png')
                             plt.close()
-
+'''
 '''
 PROVA MONK 2
 
