@@ -229,7 +229,6 @@ class NeuralNetwork:
                 curr_error = float('inf')
                 gradient = [np.zeros_like(layer) for layer in self.weights]
                 self._init_weights()
-                self.learning_rate = self.initial_lrate
                 error_list = []
                 test_error_list = []
                 acc_list = []
@@ -245,7 +244,10 @@ class NeuralNetwork:
                 beta2 = 0.999
 
                 for n_epochs in range(self.max_epochs):
-                    # decremento il learning rate
+                    # inizializzo / decremento il learning rate
+                    # constant
+                    if self.type_lr == 'constant':
+                        self.learning_rate = self.initial_lrate
                     # step decay
                     if type(self.type_lr) == tuple:
                         decay_factor = self.type_lr[0]
@@ -291,7 +293,7 @@ class NeuralNetwork:
                     # calcolo errore
                     curr_error = self.score(train_x, train_y)
                     curr_test_err = self.score(test_x, test_y)
-                    #print(curr_error)
+                    print(curr_error)
                     error_list.append(curr_error)
                     test_error_list.append(curr_test_err)
 
@@ -367,7 +369,7 @@ class NeuralNetwork:
                     # calcolo errore
                     curr_error = self.score(train_x, train_y)
                     curr_test_err = self.score(test_x, test_y)
-                    #print(curr_error)
+                    print(curr_error)
                     error_list.append(curr_error)
                     test_error_list.append(curr_test_err)
 
@@ -412,45 +414,51 @@ class NeuralNetwork:
 
         predicted_y = self.predict(data_x)
         # NB predicted_y è un array, così come data_y
-        error_list = [sum((prediction - data_y[index])**2) for index, prediction in enumerate(predicted_y)]
+        if self.act_functs[-1] == sigmoid:
+            # MSE per classificazione
+            error_list = [sum((prediction - data_y[index])**2) for index, prediction in enumerate(predicted_y)]
+        else:
+            # euclidean error per regressione
+            error_list = [np.sqrt(sum((prediction - data_y[index])**2)) for index, prediction in enumerate(predicted_y)]
+
         return sum(error_list) / len(error_list)
-'''
-    def k_fold_cv(self, data, k=5):
-    # ritorna una lista di score (MSE/accuracy), uno per ogni tentativo
+    
+    def k_fold_cv(self, data_x, data_y, k=5):
+    # ritorna una lista di score, uno per ogni tentativo
         # errore se la rete non è stata fittata --> non si conosce il numero di input e output
         if not self.weights:
             raise UntrainedError('La rete deve prima essere allenata!')
 
         # calcoliamo la lunghezza di ogni divisione del dataset
-        divided_data_size = len(data) // k
+        divided_data_size = data_x.shape[0] // k
         # np.split divide il dataset a seconda degli indici che gli passiamo nella lista (secondo parametro)
         # quindi list_subdata è una lista di un np.ndarray bidimensionali (attributi in colonna, record in riga)
-        list_subdata = np.split(data, [i * divided_data_size for i in range(1, k)])
+        list_subdata_x = np.split(data_x, [i * divided_data_size for i in range(1, k)])
+        list_subdata_y = np.split(data_y, [i * divided_data_size for i in range(1, k)])
         error_list = []
         for i in range(k):
             # splitting in test and train
             # il test set è semplicemente l'i-esimo elemento della lista delle porzioni del dataset
-            test_data = list_subdata[i]
-            # il training set è la lista dei record presenti in tutti gli altri elementi della lista delle porzioni
-            train_data = []
+            val_x = list_subdata_x[i]
+            val_y = list_subdata_y[i] 
+            # il training set è l'array dei record presenti in tutti gli altri elementi della lista delle porzioni
+            train_x = np.array([])#.reshape((0, val_x.shape[1]))
+            train_y = np.array([])
             for j in range(k):
                 if j != i:
-                    for row in list_subdata[j]:
-                        train_data.append(row)
-            # splitting in train attributes, train target, test attr and test target
-            train_x = [np.array(row[:-2]) for row in train_data]
-            train_y = [np.array(row[-2:]) for row in train_data]
-            test_x = [np.array(row[:-2]) for row in test_data]
-            test_y = [np.array(row[-2:]) for row in test_data]
+                    for rows in list_subdata_x[j]:
+                        train_x = np.vstack([train_x, rows]) if train_x.size else rows
+                    for rows in list_subdata_y[j]:
+                        train_y = np.vstack([train_y, rows]) if train_y.size else rows
             # fit the neural network
-            self.fit(train_x, train_y)
+            self.fit(train_x, train_y, val_x, val_y)
             # calculate test error and append it to the result
-            test_error = self.score(test_x, test_y)
+            test_error = self.score(val_x, val_y)
             error_list.append(test_error)
         
         return error_list
-
-    def MonteCarlo_cv(self, data, n_fit=5, test_percentage=0.7):
+    
+    def MonteCarlo_cv(self, data_x, data_y, n_fit=5, test_percentage=0.7):
     # ritorna una lista di score, come k-fold CV
         # errore se la rete non è stata fittata --> non si conosce il numero di input e output
         if not self.weights:
@@ -458,24 +466,20 @@ class NeuralNetwork:
 
         error_list = []
         for _ in range(n_fit):
-            shuffle(data)
+            #shuffle(data)
             # splitting in test and train
-            n_train = round(len(data) * test_percentage)
-            train_data = data[:n_train, :]
-            test_data = data[n_train:, :]
-            # splitting in train attributes, train target, test attr and test target
-            train_x = [np.array(row[:-2]) for row in train_data]
-            train_y = [np.array(row[-2:]) for row in train_data]
-            test_x = [np.array(row[:-2]) for row in test_data]
-            test_y = [np.array(row[-2:]) for row in test_data]
+            n_train = round(data_x.shape[0] * test_percentage)
+            train_x = data_x[:n_train, :]
+            val_x = data_x[n_train:, :]
+            train_y = data_y[:n_train, :]
+            val_y = data_y[n_train:, :]
             # fit the neural network
-            self.fit(train_x, train_y)
+            self.fit(train_x, train_y, val_x, val_y)
             # calculate test error
-            test_error = self.score(test_x, test_y)
+            test_error = self.score(val_x, val_y)
             error_list.append(test_error)
         
         return error_list
-'''
 
 def funzione(x):
     if x < -17.825393:
@@ -484,7 +488,6 @@ def funzione(x):
 
 
 if __name__ == '__main__':
-
     # eliminiamo la colonna dell'indice
     data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
     # splitting in test and train, after we shuffle the dataset
@@ -512,20 +515,20 @@ if __name__ == '__main__':
     #    train_x[:, i] = 0.8 * ((train_x[:, i] - train_x[:, i].min()) / (train_x[:, i].max() - train_x[:, i].min())) + 0.1
     #    val_x[:, i] = 0.8 * ((val_x[:, i] - val_x[:, i].min()) / (val_x[:, i].max() - val_x[:, i].min())) + 0.1
     # grid seach
-    learning_rates = [0.01]
+    learning_rates = [0.001]
     lambdas = [0.001]
     alphas = [0]
-    neurons_per_layer = [5]
-    minibatch_sizes = [32]
-    layers_numbers = [2]
-    type_lr = 'constant'
+    neurons_per_layer = [20]
+    minibatch_sizes = [128]
+    layers_numbers = [3]
+    type_lr = (0.5, 15)
     for neuron in neurons_per_layer:
         for layer in layers_numbers:
             for learning_rate in learning_rates:
                 for Lambda in lambdas:
                     for alpha in alphas:
                         for  minibatch_size in minibatch_sizes:
-                            titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str((layer) * ['tanh']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch_size = ' + str(minibatch_size) + ', algorithm = SGD'
+                            titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str((layer) * ['relu']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch_size = ' + str(minibatch_size) + ', algorithm = SGD'
                             print(titolo)
                             NN = NeuralNetwork((layer) * [neuron], (layer) * ['tanh'], learning_rate=learning_rate, type_lr=type_lr, Lambda=Lambda, alpha=alpha, toll=0.000001, n_init=1, max_epochs=200, minibatch_size=minibatch_size, algorithm='SGD')
                             error_list, n_epochs, test_error_list, acc_list, test_acc_list = NN.fit(train_x, train_y, val_x, val_y)
@@ -540,6 +543,13 @@ if __name__ == '__main__':
                             plt.show()
                             #plt.savefig('C:/Users/danie/Desktop/Daniele/Laurea magistrale/Machine Learning/Machine-Learning-project/plot/MSE_' + titolo +'.png')
                             plt.close()
+                            data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
+                            train_and_val_data_x = train_and_val_data[:, :-2]
+                            # normalizzazione
+                            train_and_val_data_x = (train_and_val_data_x - np.mean(train_and_val_data_x, axis=0)) / np.std(train_and_val_data_x, axis=0)
+                            train_and_val_data_y = train_and_val_data[:, -2:]
+                            cv = NN.k_fold_cv(train_and_val_data_x, train_and_val_data_y)
+                            print(np.mean(cv), np.std(cv))
     
     '''
     # test
