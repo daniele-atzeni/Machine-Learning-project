@@ -6,12 +6,12 @@ Created on Tue Nov  6 14:20:03 2018
 """
 
 import numpy as np
-from numpy.random import shuffle
+from numpy.random import shuffle, randn
 import matplotlib.pyplot as plt
 from math import e
+from math import exp
 from math import sqrt
 from math import tanh
-from random import uniform
 from copy import deepcopy
 
 class Error(Exception):
@@ -60,8 +60,20 @@ dict_funct = {'sigmoid' : sigmoid, 'tanh': my_tanh, 'relu' : relu}
 def my_sum(matrix_list1, matrix_list2):
     return [matrix_list1[i] + matrix_list2[i] for i in range(len(matrix_list1))]
 
+def my_prod(matrix_list1, matrix_list2):
+    return [matrix_list1[i] * matrix_list2[i] for i in range(len(matrix_list1))]
+
+def my_div(matrix_list1, matrix_list2):
+    return [matrix_list1[i] / matrix_list2[i] for i in range(len(matrix_list1))]
+
+def my_sqrt(matrix_list1):
+    return [np.sqrt(matrix_list1[i]) for i in range(len(matrix_list1))]
+
 def my_prod_per_scal(scalar, matrix_list):
     return [scalar * matrix for matrix in matrix_list]
+
+def my_sum_per_scal(scalar, matrix_list):
+    return [scalar + matrix for matrix in matrix_list]
 
 def norm(matrix_list):
     norm = 0
@@ -90,7 +102,7 @@ NB: le funzioni di attivazione sono una in più degli hidden layer
 '''
 
 class NeuralNetwork:
-    def __init__(self, hidden_layers, act_functs, toll=0.1, learning_rate=0.0005, alpha = 0, minibatch_size=None, max_epochs=200, Lambda=0.001,  n_init=5, classification=False):
+    def __init__(self, hidden_layers, act_functs, toll=0.1, learning_rate=0.0005, type_lr='constant' , alpha = 0, minibatch_size=None, max_epochs=200, Lambda=0.001,  n_init=5, classification=False, algorithm='ADAM'):
         if len(act_functs) != len(hidden_layers):
             raise InputError('Numero funzioni attivazione != Numero hidden layers')
         self.hidden_layers = hidden_layers
@@ -109,12 +121,15 @@ class NeuralNetwork:
         self.weights = None
         self.deltas = None
         self.toll = toll
-        self.learning_rate = learning_rate
+        self.learning_rate = None
+        self.initial_lrate = learning_rate
+        self.type_lr = type_lr
         self.alpha = alpha
         self.minibatch_size = minibatch_size
         self.max_epochs = max_epochs
         self.Lambda = Lambda
         self.n_init = n_init
+        self.algorithm = algorithm
 
     def _forward(self, sample):
     # ritorna un np.array con gli output
@@ -184,8 +199,8 @@ class NeuralNetwork:
         for i in range(len(self.weights)):
             for j in range(len(self.weights[i])):
                 for k in range(len(self.weights[i][j])):
-                    self.weights[i][j][k] = uniform(-0.7, 0.7)
-
+                    self.weights[i][j][k] = randn() * np.sqrt(1 / len(self.weights[i][j]))
+                    
     def _update_weights(self, gradient):
         # regularization
         if self.Lambda != 0:
@@ -194,74 +209,157 @@ class NeuralNetwork:
         self.weights = my_sum(self.weights, my_prod_per_scal(self.learning_rate, gradient))
         return 
 
-    def fit(self, train_x, train_y, test_x, test_y):
+    def fit(self, train_x, train_y):
         # creiamo la lista di matrici dei pesi, ora che sappiamo le dimensioni dell'input e dell'output
         # creiamo anche i delta, ora che sappiamo il numero di neuroni di ogni layer
         layers_list = [train_x.shape[1]] + list(self.hidden_layers) + [train_y.shape[1]]
         self.weights = [np.empty((layers_list[i], layers_list[i-1] + 1), dtype='float32') for i in range(1, len(layers_list))]
         self.deltas = [np.empty(n_neuron, dtype='float32') for n_neuron in layers_list]
-        # se minibatch_size = None ---> versione batch dell'algoritmo, quindi minibatch_size = len(train_x)
-        if self.minibatch_size == None:
-            self.minibatch_size = train_x.shape[0]
 
         # ora inizia l'algoritmo
-        min_error = float('inf')
-        # i pesi vanno inizializzati più volte
-        # ogni volta che li inizializziamo facciamo ripartire l'algoritmo vero e proprio
-        # memorizziamo l'errore minimo di ogni tentativo e i pesi migliori
-        for n in range(self.n_init):
-            #print('inizializzazione', n + 1)
-            curr_error = float('inf')
-            gradient = [np.zeros_like(layer) for layer in self.weights]
-            self._init_weights()
-            error_list = []
-            test_error_list = []
-            acc_list = []
-            test_acc_list = []
+        if self.algorithm == 'ADAM':
+            min_error = float('inf')
+            if self.minibatch_size == None:
+                self.minibatch_size = train_x.shape[0]
+            # i pesi vanno inizializzati più volte
+            # ogni volta che li inizializziamo facciamo ripartire l'algoritmo vero e proprio
+            # memorizziamo l'errore minimo di ogni tentativo e i pesi migliori
+            for _ in range(self.n_init):
+                #print('inizializzazione', n + 1)
+                curr_error = float('inf')
+                gradient = [np.zeros_like(layer) for layer in self.weights]
+                self._init_weights()
 
-            for n_epochs in range(self.max_epochs):
-                # calcolo del gradiente, sommando tutti i risultati di ogni backprop
-                for index, pattern in enumerate(train_x):
-                    outputNN = self._forward(pattern)
-                    gradient = my_sum(gradient, self._backward(outputNN, train_y[index]))
-                    # dopo minibatch_size passi aggiorniamo i pesi e reinizializziamo il gradiente
-                    # NB: la regolarizzazione viene fatta in update_weights
-                    if index != 0 and index % self.minibatch_size == 0:
-                        self._update_weights(gradient)
-                        # reset the gradient, to 0 if no momentum(alpha = 0)
-                        # to alpha times the old gradient otherwise
-                        gradient = my_prod_per_scal(self.alpha, gradient)
+                t = 0
+                m = [np.zeros_like(layer) for layer in self.weights]
+                v = [np.zeros_like(layer) for layer in self.weights]
+                m_ = [np.zeros_like(layer) for layer in self.weights]
+                v_ = [np.zeros_like(layer) for layer in self.weights] 
+                eps = 10**(-8)
+                beta1 = 0.9
+                beta2 = 0.999
 
-                # dopo aver visto tutti i pattern bisogna nuovamente aggiornare i pesi
-                self._update_weights(gradient)
-                gradient = my_prod_per_scal(self.alpha, gradient)
-                # calcolo errore
-                curr_error = self.score(train_x, train_y)
-                curr_test_err = self.score(test_x, test_y)
-                #print(curr_error)
-                error_list.append(curr_error)
-                test_error_list.append(curr_test_err)
-                
-                #############
-                pred_class = [round(elem[0]) for elem in self.predict(train_x)]
-                pred_class_test = [round(elem[0]) for elem in self.predict(test_x)]
-                train_acc = 1 - sum([1 if pred_class[i] != train_y[i][0] else 0 for i in range(len(pred_class))]) / len(pred_class)
-                test_acc = 1 - sum([1 if pred_class_test[i] != test_y[i][0] else 0 for i in range(len(pred_class_test))]) / len(pred_class_test)
-                acc_list.append(train_acc)
-                test_acc_list.append(test_acc)
-                ##############
+                for n_epochs in range(self.max_epochs):
+                    # inizializzo / decremento il learning rate
+                    # constant
+                    if self.type_lr == 'constant':
+                        self.learning_rate = self.initial_lrate
+                    # step decay
+                    if type(self.type_lr) == tuple:
+                        decay_factor = self.type_lr[0]
+                        step_size = self.type_lr[1]
+                        self.learning_rate = self.initial_lrate * (decay_factor ** np.floor(n_epochs / step_size))
+                    # exponential decay
+                    if type(self.type_lr) == float:
+                        self.learning_rate = self.initial_lrate * exp(-(self.type_lr * n_epochs))
 
-                if curr_error < self.toll:
-                    break
+                    # calcolo del gradiente, sommando tutti i risultati di ogni backprop
+                    for index, pattern in enumerate(train_x):
+                        outputNN = self._forward(pattern)
+                        gradient = my_sum(gradient, self._backward(outputNN, train_y[index]))
+                        if index != 0 and index % self.minibatch_size == 0:
+                            if self.Lambda != 0:
+                                gradient = my_sum(gradient, my_prod_per_scal(-self.Lambda, self.weights))
+                            t = t + 1
+                            m = my_sum(my_prod_per_scal(beta1, m), my_prod_per_scal((1 - beta1), gradient))
+                            v = my_sum(my_prod_per_scal(beta2, v), my_prod_per_scal((1 - beta2), my_prod(gradient, gradient)))
+                            m_ = my_prod_per_scal(1 / (1 - beta1**t), m)
+                            v_ = my_prod_per_scal(1 / (1 - beta2**t), v)
+                            num = my_prod_per_scal(self.learning_rate, m_)
+                            div = my_sum_per_scal(eps, my_sqrt(v_))
+                            self.weights = my_sum(self.weights, my_div(num, div))
 
-            # alla fine dell'allenamento, se abbiamo ottenuto risultati migliori aggiorniamo min_error e best_weights
-            if curr_error < min_error:
-                min_error = curr_error
-                best_weights = deepcopy(self.weights)
+                            gradient = my_prod_per_scal(self.alpha, gradient)
+                    
+                    # dopo aver visto tutti i pattern bisogna aggiornare i pesi
+                    if self.Lambda != 0:
+                        gradient = my_sum(gradient, my_prod_per_scal(-self.Lambda, self.weights))
+                    t = t + 1
+                    m = my_sum(my_prod_per_scal(beta1, m), my_prod_per_scal((1 - beta1), gradient))
+                    v = my_sum(my_prod_per_scal(beta2, v), my_prod_per_scal((1 - beta2), my_prod(gradient, gradient)))
+                    m_ = my_prod_per_scal(1 / (1 - beta1**t), m)
+                    v_ = my_prod_per_scal(1 / (1 - beta2**t), v)
+                    num = my_prod_per_scal(self.learning_rate, m_)
+                    div = my_sum_per_scal(eps, my_sqrt(v_))
+                    self.weights = my_sum(self.weights, my_div(num, div))
 
-        self.weights = best_weights
-        return error_list, n_epochs, test_error_list, acc_list, test_acc_list
-    
+                    gradient = my_prod_per_scal(0, gradient)
+
+                    # calcolo errore
+                    curr_error = self.score(train_x, train_y)
+                    #print(curr_error)
+
+                    if curr_error < self.toll:
+                        break
+
+                # alla fine dell'allenamento, se abbiamo ottenuto risultati migliori aggiorniamo min_error e best_weights
+                if curr_error <= min_error:
+                    min_error = curr_error
+                    best_weights = deepcopy(self.weights)
+
+            self.weights = best_weights
+            return 
+        
+        if self.algorithm == 'SGD':
+            # se minibatch_size = None ---> versione batch dell'algoritmo, quindi minibatch_size = len(train_x)
+            if self.minibatch_size == None:
+                self.minibatch_size = train_x.shape[0]
+
+            # ora inizia l'algoritmo
+            min_error = float('inf')
+            # i pesi vanno inizializzati più volte
+            # ogni volta che li inizializziamo facciamo ripartire l'algoritmo vero e proprio
+            # memorizziamo l'errore minimo di ogni tentativo e i pesi migliori
+            for _ in range(self.n_init):
+                #print('inizializzazione', n + 1)
+                curr_error = float('inf')
+                gradient = [np.zeros_like(layer) for layer in self.weights]
+                self._init_weights()
+
+                for n_epochs in range(self.max_epochs):
+                    # inizializzo / decremento il learning rate
+                    # constant
+                    if self.type_lr == 'constant':
+                        self.learning_rate = self.initial_lrate
+                    # step decay
+                    if type(self.type_lr) == tuple:
+                        decay_factor = self.type_lr[0]
+                        step_size = self.type_lr[1]
+                        self.learning_rate = self.initial_lrate * (decay_factor ** np.floor(n_epochs / step_size))
+                    # exponential decay
+                    if type(self.type_lr) == float:
+                        self.learning_rate = self.initial_lrate * exp(-(self.type_lr * n_epochs))
+
+                    # calcolo del gradiente, sommando tutti i risultati di ogni backprop
+                    for index, pattern in enumerate(train_x):
+                        outputNN = self._forward(pattern)
+                        gradient = my_sum(gradient, self._backward(outputNN, train_y[index]))
+                        # dopo minibatch_size passi aggiorniamo i pesi e reinizializziamo il gradiente
+                        # NB: la regolarizzazione viene fatta in update_weights
+                        if index != 0 and index % self.minibatch_size == 0:
+                            self._update_weights(gradient)
+                            # reset the gradient, to 0 if no momentum(alpha = 0)
+                            # to alpha times the old gradient otherwise
+                            gradient = my_prod_per_scal(self.alpha, gradient)
+
+                    # dopo aver visto tutti i pattern bisogna nuovamente aggiornare i pesi
+                    self._update_weights(gradient)
+                    gradient = my_prod_per_scal(self.alpha, gradient)
+                    # calcolo errore
+                    curr_error = self.score(train_x, train_y)
+                    #print(curr_error)
+
+                    if curr_error < self.toll:
+                        break
+
+                # alla fine dell'allenamento, se abbiamo ottenuto risultati migliori aggiorniamo min_error e best_weights
+                if curr_error <= min_error:
+                    min_error = curr_error
+                    best_weights = deepcopy(self.weights)
+
+            self.weights = best_weights
+            return 
+        
     def predict(self, data):
     # ritorna una lista di np.array con gli output per ogni pattern
         # errore se la rete non è stata fittata --> non si conosce il numero di input e output
@@ -283,290 +381,119 @@ class NeuralNetwork:
 
         predicted_y = self.predict(data_x)
         # NB predicted_y è un array, così come data_y
-        error_list = [sum((prediction - data_y[index])**2) for index, prediction in enumerate(predicted_y)]
-        return sum(error_list) / len(error_list)
+        if self.act_functs[-1] == sigmoid:
+            # MSE per classificazione
+            error_list = [sum((prediction - data_y[index])**2) for index, prediction in enumerate(predicted_y)]
+        else:
+            # euclidean error per regressione
+            error_list = [np.sqrt(sum((prediction - data_y[index])**2)) for index, prediction in enumerate(predicted_y)]
 
-    def k_fold_cv(self, data, k=5):
-    # ritorna una lista di score (MSE/accuracy), uno per ogni tentativo
-        # errore se la rete non è stata fittata --> non si conosce il numero di input e output
-        if not self.weights:
-            raise UntrainedError('La rete deve prima essere allenata!')
+        return sum(error_list) / len(error_list)
+    
+    def k_fold_cv(self, data_x, data_y, k=5):
+    # ritorna una lista di score, uno per ogni tentativo
 
         # calcoliamo la lunghezza di ogni divisione del dataset
-        divided_data_size = len(data) // k
+        divided_data_size = data_x.shape[0] // k
         # np.split divide il dataset a seconda degli indici che gli passiamo nella lista (secondo parametro)
         # quindi list_subdata è una lista di un np.ndarray bidimensionali (attributi in colonna, record in riga)
-        list_subdata = np.split(data, [i * divided_data_size for i in range(1, k)])
+        list_subdata_x = np.split(data_x, [i * divided_data_size for i in range(1, k)])
+        list_subdata_y = np.split(data_y, [i * divided_data_size for i in range(1, k)])
         error_list = []
         for i in range(k):
             # splitting in test and train
             # il test set è semplicemente l'i-esimo elemento della lista delle porzioni del dataset
-            test_data = list_subdata[i]
-            # il training set è la lista dei record presenti in tutti gli altri elementi della lista delle porzioni
-            train_data = []
+            val_x = list_subdata_x[i]
+            val_y = list_subdata_y[i] 
+            # il training set è l'array dei record presenti in tutti gli altri elementi della lista delle porzioni
+            train_x = np.array([])#.reshape((0, val_x.shape[1]))
+            train_y = np.array([])
             for j in range(k):
                 if j != i:
-                    for row in list_subdata[j]:
-                        train_data.append(row)
-            # splitting in train attributes, train target, test attr and test target
-            train_x = [np.array(row[:-2]) for row in train_data]
-            train_y = [np.array(row[-2:]) for row in train_data]
-            test_x = [np.array(row[:-2]) for row in test_data]
-            test_y = [np.array(row[-2:]) for row in test_data]
+                    for rows in list_subdata_x[j]:
+                        train_x = np.vstack([train_x, rows]) if train_x.size else rows
+                    for rows in list_subdata_y[j]:
+                        train_y = np.vstack([train_y, rows]) if train_y.size else rows
             # fit the neural network
             self.fit(train_x, train_y)
             # calculate test error and append it to the result
-            test_error = self.score(test_x, test_y)
-            error_list.append(test_error)
-        
-        return error_list
-
-    def MonteCarlo_cv(self, data, n_fit=5, test_percentage=0.7):
-    # ritorna una lista di score, come k-fold CV
-        # errore se la rete non è stata fittata --> non si conosce il numero di input e output
-        if not self.weights:
-            raise UntrainedError('La rete deve prima essere allenata!')
-
-        error_list = []
-        for _ in range(n_fit):
-            shuffle(data)
-            # splitting in test and train
-            n_train = round(len(data) * test_percentage)
-            train_data = data[:n_train, :]
-            test_data = data[n_train:, :]
-            # splitting in train attributes, train target, test attr and test target
-            train_x = [np.array(row[:-2]) for row in train_data]
-            train_y = [np.array(row[-2:]) for row in train_data]
-            test_x = [np.array(row[:-2]) for row in test_data]
-            test_y = [np.array(row[-2:]) for row in test_data]
-            # fit the neural network
-            self.fit(train_x, train_y)
-            # calculate test error
-            test_error = self.score(test_x, test_y)
+            test_error = self.score(val_x, val_y)
             error_list.append(test_error)
         
         return error_list
 
 
+if __name__ == '__main__':
+    # eliminiamo la colonna dell'indice
+    data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
+    # splitting in test and train, after we shuffle the dataset
+    shuffle(data)
+    train_and_val_percentage = 0.75
+    n_train_and_val = round(len(data) * train_and_val_percentage)
+    train_and_val_data = data[:n_train_and_val, :]
+    test_data = data[n_train_and_val:, :]
+    # splitting in train and validation
+    train_percentage = 0.75
+    n_train = round(len(train_and_val_data) * train_percentage)
+    train_data = train_and_val_data[:n_train, :]
+    val_data = train_and_val_data[n_train:, :]
+    # splitting in train attributes, train target, test attr and test target
+    train_x = train_data[:, :-2]
+    train_y = train_data[:, -2:]
+    val_x = val_data[:, :-2]
+    val_y = val_data[:, -2:]
+    # grid seach fatta su un file jupyter, per il codice vedere monk.py
+    learning_rate = 0.00005
+    Lambda = 0.1
+    alpha = 0.8
+    neuron = 50
+    minibatch_size = 128
+    layer = 2
+    type_lr = 'constant'
+    algorithm = 'SGD'
+    titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str((layer) * ['tanh']) + ', learning rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch size = ' + str(minibatch_size) + ', algorithm = ' + algorithm
+    print(titolo)
+    NN = NeuralNetwork((layer) * [neuron], (layer) * ['tanh'], learning_rate=learning_rate, type_lr=type_lr, Lambda=Lambda, alpha=alpha, toll=0.000001, n_init=1, max_epochs=300, minibatch_size=minibatch_size, algorithm=algorithm)
+    NN.fit(train_x, train_y)
+    print('train error = ' + str(NN.score(train_x, train_y)), 'validation error = ' + str(NN.score(val_x, val_y)))
+    # cross validation, commentata perché prende troppo tempo
+    '''
+    data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
+    train_and_val_data_x = train_and_val_data[:, :-2]
+    train_and_val_data_y = train_and_val_data[:, -2:]
+    cv = NN.k_fold_cv(train_and_val_data_x, train_and_val_data_y, k=10)
+    print(np.mean(cv), np.std(cv))
+    # OUTPUT: 1.1787   0.1017
+    '''
+    # test
+    # rialleniamo la rete su tutto il training e validation set, che si chiamava train_and_val_data
+    train_x = train_and_val_data[:, :-2]
+    train_y = train_and_val_data[:, -2:]
+    NN.fit(train_x, train_y)
+    # ricorda test_data è la porzione di dataset non toccata
+    test_x = test_data[:, :-2]
+    test_y = test_data[:, -2:]
+    # compute error
+    test_error = NN.score(test_x, test_y)
+    print('test error = ', test_error)
+    # predetti
+    test_predict = NN.predict(test_x)
+    # plot results
+    fig, ax = plt.subplots()
+    plt.scatter([point[0] for point in test_y], [point[1] for point in test_y])
+    plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='r', alpha=0.8)
+    for point in test_predict:
+        circle = plt.Circle(tuple(point), 1.1787, color='b', alpha = 0.02)
+        ax.add_artist(circle)
+    plt.legend(('actual points', 'predicted points'))
+    plt.title('test points and test predictions')
+    plt.show()
 
-###################-----------PROVA--------###########################
-'''
-PROVA MONK 1
-
-data = np.genfromtxt("monk1.txt")
-train_y = data[:, 0]
-train_y = train_y.reshape((train_y.shape[0], 1))
-train_x = data[:, 1:-1]
-data_test = np.genfromtxt("test_monk1.txt")
-test_y = data_test[:, 0]
-test_y = test_y.reshape((test_y.shape[0], 1))
-test_x = data_test[:, 1:-1]
-# normalizzazione min-max
-train_x = ( train_x - np.array([min(train_x[:, i]) for i in range(train_x.shape[1])]) ) / np.array([max(train_x[:, i]) for i in range(train_x.shape[1])])
-test_x = ( test_x - np.array([min(test_x[:, i]) for i in range(test_x.shape[1])]) ) / np.array([max(test_x[:, i]) for i in range(test_x.shape[1])])
-
-NN = NeuralNetwork(4 * [10], 4 * ['tanh'], classification=True, learning_rate=0.01, Lambda=0, alpha=0.9, toll=0.000001, n_init=1, max_epochs=200, minibatch_size=2)
-error_list, n_epochs, test_error_list, acc_list, test_acc_list = NN.fit(train_x, train_y, test_x, test_y)
-plt.plot(range(n_epochs + 1), error_list)
-plt.plot(range(n_epochs + 1), test_error_list, ls='dashed')
-plt.legend(['train error', 'test error'])
-plt.title('MSE vs number of epochs')
-plt.xlabel('number of epochs')
-plt.ylabel('MSE')
-plt.show()
-plt.plot(range(n_epochs + 1), acc_list)
-plt.plot(range(n_epochs + 1), test_acc_list, ls='dashed')
-plt.legend(['train accuracy', 'test accuracy'])
-plt.title('accuracy vs number of epochs')
-plt.xlabel('number of epochs')
-plt.ylabel('accuracy')
-plt.show()
-'''
-'''
-PROVA MONK 2
-'''
-data = np.genfromtxt("monk2.txt")
-train_y = data[:, 0]
-train_y = train_y.reshape((train_y.shape[0], 1))
-train_x = data[:, 1:-1]
-data_test = np.genfromtxt("test_monk2.txt")
-test_y = data_test[:, 0]
-test_y = test_y.reshape((test_y.shape[0], 1))
-test_x = data_test[:, 1:-1]
-# normalizzazione min-max
-train_x = ( train_x - np.array([min(train_x[:, i]) for i in range(train_x.shape[1])]) ) / np.array([max(train_x[:, i]) for i in range(train_x.shape[1])])
-test_x = ( test_x - np.array([min(test_x[:, i]) for i in range(test_x.shape[1])]) ) / np.array([max(test_x[:, i]) for i in range(test_x.shape[1])])
-# grid seach
-learning_rates = np.arange(0.01, 0.1, 0.01)
-alphas = np.arange(0.1, 1, 0.1)
-neurons_per_layer = [5, 10, 20, 30]
-layers_numbers = [3, 4]
-for neuron in neurons_per_layer:
-    for layer in layers_numbers:
-        for learning_rate in learning_rates:
-            for alpha in alphas:
-                titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str(layer * ['tanh']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = 0' + ', alpha = ' + str(alpha) + ', minibatch_size = 8'
-                print(titolo)
-                NN = NeuralNetwork(layer * [neuron], layer * ['tanh'], classification=True, learning_rate=learning_rate, Lambda=0, alpha=alpha, toll=0.000001, n_init=1, max_epochs=100, minibatch_size=8)
-                error_list, n_epochs, test_error_list, acc_list, test_acc_list = NN.fit(train_x, train_y, test_x, test_y)
-                print('train error = ' + str(error_list[-1]), 'test_error = ' + str(test_error_list[-1]), 'train accuracy = ' + str(acc_list[-1]), 'test accuracy = ' + str(test_acc_list[-1]))
-                if (test_acc_list[-1] >= 0.85):
-                    plt.plot(range(n_epochs + 1), error_list)
-                    plt.plot(range(n_epochs + 1), test_error_list, ls='dashed')
-                    plt.legend(['train error', 'test error'])
-                    plt.title('MSE '+ titolo)
-                    plt.xlabel('number of epochs')
-                    plt.ylabel('MSE')
-                    plt.show()
-                    plt.plot(range(n_epochs + 1), acc_list)
-                    plt.plot(range(n_epochs + 1), test_acc_list, ls='dashed')
-                    plt.legend(['train accuracy', 'test accuracy'])
-                    plt.title('accuracy '+ titolo)
-                    plt.xlabel('number of epochs')
-                    plt.ylabel('accuracy')
-                    plt.show()
-
-'''
-PROVA MONK 3
-
-data = np.genfromtxt("monk3.txt")
-train_y = data[:, 0]
-train_y = train_y.reshape((train_y.shape[0], 1))
-train_x = data[:, 1:-1]
-data_test = np.genfromtxt("test_monk3.txt")
-test_y = data_test[:, 0]
-test_y = test_y.reshape((test_y.shape[0], 1))
-test_x = data_test[:, 1:-1]
-# normalizzazione min-max
-train_x = ( train_x - np.array([min(train_x[:, i]) for i in range(train_x.shape[1])]) ) / np.array([max(train_x[:, i]) for i in range(train_x.shape[1])])
-test_x = ( test_x - np.array([min(test_x[:, i]) for i in range(test_x.shape[1])]) ) / np.array([max(test_x[:, i]) for i in range(test_x.shape[1])])
-# allenamento
-NN = NeuralNetwork(4 * [10], 4 * ['tanh'], classification=True, learning_rate=0.01, Lambda=0, alpha=0.9, toll=0.000001, n_init=1, max_epochs=200, minibatch_size=2)
-error_list, n_epochs, test_error_list, acc_list, test_acc_list = NN.fit(train_x, train_y, test_x, test_y)
-plt.plot(range(n_epochs + 1), error_list)
-plt.plot(range(n_epochs + 1), test_error_list, ls='dashed')
-plt.legend(['train error', 'test error'])
-plt.title('MSE vs number of epochs')
-plt.xlabel('number of epochs')
-plt.ylabel('MSE')
-plt.show()
-plt.plot(range(n_epochs + 1), acc_list)
-plt.plot(range(n_epochs + 1), test_acc_list, ls='dashed')
-plt.legend(['train accuracy', 'test accuracy'])
-plt.title('accuracy vs number of epochs')
-plt.xlabel('number of epochs')
-plt.ylabel('accuracy')
-plt.show()
-'''
-''' 
-PROVA TRAINING SET
-
-# eliminiamo la colonna dell'indice
-data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
-# splitting in test and train, after we shuffle the dataset
-shuffle(data)
-train_and_val_percentage = 0.7
-n_train_and_val = round(len(data) * train_and_val_percentage)
-train_and_val_data = data[:n_train_and_val, :]
-test_data = data[n_train_and_val:, :]
-# splitting in train and validation
-train_percentage = 0.7
-n_train = round(len(train_and_val_data) * train_percentage)
-train_data = train_and_val_data[:n_train, :]
-val_data = train_and_val_data[n_train:, :]
-# splitting in train attributes, train target, test attr and test target
-train_x = [np.array(row[:-2]) for row in train_data]
-train_y = [np.array(row[-2:]) for row in train_data]
-val_x = [np.array(row[:-2]) for row in val_data]
-val_y = [np.array(row[-2:]) for row in val_data]
-# normalization of data
-train_x = (train_x - np.mean(train_x, axis=0)) / np.std(train_x, axis=0)
-val_x = (val_x - np.mean(val_x, axis=0)) / np.std(val_x, axis=0)
-# prova con parametri 'casuali'
-NN = NeuralNetwork( 3 * [20], 3 * ['tanh'], alpha=0.3, n_init=1, learning_rate=0.0002, minibatch_size=32)
-NN.fit(train_x, train_y)
-train_error = NN.score(train_x, train_y)
-val_error = NN.score(val_x, val_y)
-print('train error', train_error)
-print('val error', val_error)
-# plot dei risultati
-# training
-train_predict = NN.predict(train_x)
-plt.scatter([point[0] for point in train_y], [point[1] for point in train_y], c='b', alpha=0.05)
-plt.scatter([point[0] for point in train_predict], [point[1] for point in train_predict], c='r', alpha=0.5)
-plt.title('train')
-plt.show()
-# validation
-val_predict = NN.predict(val_x)
-plt.scatter([point[0] for point in val_y], [point[1] for point in val_y], c='y', alpha=0.5)
-plt.scatter([point[0] for point in val_predict], [point[1] for point in val_predict], c='k', alpha=0.5)
-plt.title('validation')
-plt.show()
-# test
-# ricorda test_data è la porzione di dataset non toccata
-test_x = [np.array(row[:-2]) for row in test_data]
-test_y = [np.array(row[-2:]) for row in test_data]
-# normalizzazione attributi
-test_x = (test_x - np.mean(test_x, axis=0)) / np.std(test_x, axis=0)
-test_predict = NN.predict(test_x)
-# compute error
-test_error = NN.score(test_x, test_y)
-print('test_error', test_error)
-#plot result
-plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='y', alpha=0.5)
-plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='k', alpha=0.5)
-plt.title('test')
-plt.show()
-'''
-''' PROVA TRAINING SET NON NORMALIZZATO
-# eliminiamo la colonna dell'indice
-data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
-# splitting in test and train, after we shuffle the dataset
-shuffle(data)
-train_and_val_percentage = 0.7
-n_train_and_val = round(len(data) * train_and_val_percentage)
-train_and_val_data = data[:n_train_and_val, :]
-test_data = data[n_train_and_val:, :]
-# splitting in train and validation
-train_percentage = 0.7
-n_train = round(len(train_and_val_data) * train_percentage)
-train_data = train_and_val_data[:n_train, :]
-val_data = train_and_val_data[n_train:, :]
-# splitting in train attributes, train target, test attr and test target
-train_x = [np.array(row[:-2]) for row in train_data]
-train_y = [np.array(row[-2:]) for row in train_data]
-val_x = [np.array(row[:-2]) for row in val_data]
-val_y = [np.array(row[-2:]) for row in val_data]
-# prova con parametri 'casuali'
-NN = NeuralNetwork( 3 * [20], 3 * ['tanh'], alpha=0.3, n_init=1, learning_rate=0.0002, minibatch_size=32)
-NN.fit(train_x, train_y)
-train_error = NN.score(train_x, train_y)
-val_error = NN.score(val_x, val_y)
-print('train error', train_error)
-print('val error', val_error)
-# plot dei risultati
-# training
-train_predict = NN.predict(train_x)
-plt.scatter([point[0] for point in train_y], [point[1] for point in train_y], c='b', alpha=0.05)
-plt.scatter([point[0] for point in train_predict], [point[1] for point in train_predict], c='r', alpha=0.5)
-plt.title('train')
-plt.show()
-# validation
-val_predict = NN.predict(val_x)
-plt.scatter([point[0] for point in val_y], [point[1] for point in val_y], c='y', alpha=0.5)
-plt.scatter([point[0] for point in val_predict], [point[1] for point in val_predict], c='k', alpha=0.5)
-plt.title('validation')
-plt.show()
-# test
-# ricorda test_data è la porzione di dataset non toccata
-test_x = [np.array(row[:-2]) for row in test_data]
-test_y = [np.array(row[-2:]) for row in test_data]
-test_error = NN.score(test_x, test_y)
-print('test_error', test_error)
-#plot result
-test_predict = NN.predict(test_x)
-plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='y', alpha=0.5)
-plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='k', alpha=0.5)
-plt.title('test')
-plt.show()
-'''
+    # previsione finale sul blind data
+    data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
+    data_x = data[:, :-2]
+    data_y = data[:, -2:]
+    NN.fit(data_x, data_y)
+    blind_data = np.genfromtxt("ML-CUP18-TS.csv", delimiter=',')[:, 1:]
+    blind_predicted = NN.predict(blind_data)
+    np.savetxt('output_CUP.csv', blind_predicted, delimiter=',')
