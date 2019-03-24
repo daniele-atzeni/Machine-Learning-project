@@ -6,7 +6,7 @@ Created on Tue Nov  6 14:20:03 2018
 """
 
 import numpy as np
-from numpy.random import shuffle, randn, uniform
+from numpy.random import shuffle, randn
 import matplotlib.pyplot as plt
 from math import e
 from math import exp

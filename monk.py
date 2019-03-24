@@ -85,7 +85,7 @@ train_and_val_data_y = train_and_val_data[:, 0]
 train_and_val_data_y = train_and_val_data_y.reshape((train_and_val_data_y.shape[0], 1))
 cv = NN.k_fold_cv(train_and_val_data_x, train_and_val_data_y)
 print(np.mean(cv), np.std(cv))
-# OUTPUT: 
+# OUTPUT: 0.0026   0.0034
 '''                        
 print('MSE test set', NN.score(test_x, test_y))
 pred_class_test = [round(elem[0]) for elem in NN.predict(test_x)]
@@ -151,7 +151,7 @@ train_and_val_data_y = train_and_val_data[:, 0]
 train_and_val_data_y = train_and_val_data_y.reshape((train_and_val_data_y.shape[0], 1))
 cv = NN.k_fold_cv(train_and_val_data_x, train_and_val_data_y)
 print(np.mean(cv), np.std(cv))
-# OUTPUT: 
+# OUTPUT: 0.0003   7.5e-05
 '''            
 print('MSE test set', NN.score(test_x, test_y))
 pred_class_test = [round(elem[0]) for elem in NN.predict(test_x)]
@@ -217,7 +217,7 @@ train_and_val_data_y = train_and_val_data[:, 0]
 train_and_val_data_y = train_and_val_data_y.reshape((train_and_val_data_y.shape[0], 1))
 cv = NN.k_fold_cv(train_and_val_data_x, train_and_val_data_y)
 print(np.mean(cv), np.std(cv))
-# OUTPUT: 
+# OUTPUT: 0.386   0.0022
 '''
 # test set  
 print('MSE test set', NN.score(test_x, test_y))
