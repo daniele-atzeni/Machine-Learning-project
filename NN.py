@@ -456,11 +456,11 @@ if __name__ == '__main__':
     layer = 2
     type_lr = 'constant'
     algorithm = 'SGD'
-    titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str((layer) * ['tanh']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch_size = ' + str(minibatch_size) + ', algorithm = ' + algorithm
+    titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str((layer) * ['tanh']) + ', learning rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch size = ' + str(minibatch_size) + ', algorithm = ' + algorithm
     print(titolo)
     NN = NeuralNetwork((layer) * [neuron], (layer) * ['tanh'], learning_rate=learning_rate, type_lr=type_lr, Lambda=Lambda, alpha=alpha, toll=0.000001, n_init=1, max_epochs=300, minibatch_size=minibatch_size, algorithm=algorithm)
     NN.fit(train_x, train_y)
-    print('train error = ' + str(NN.score(train_x, train_y)), 'validation_error = ' + str(NN.score(val_x, val_y)))
+    print('train error = ' + str(NN.score(train_x, train_y)), 'validation error = ' + str(NN.score(val_x, val_y)))
     # cross validation, commentata perché prende troppo tempo
     '''
     data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
@@ -468,7 +468,7 @@ if __name__ == '__main__':
     train_and_val_data_y = train_and_val_data[:, -2:]
     cv = NN.k_fold_cv(train_and_val_data_x, train_and_val_data_y, k=10)
     print(np.mean(cv), np.std(cv))
-    OUTPUT: 1.1787   0.1017
+    # OUTPUT: 1.1787   0.1017
     '''
     # test
     # rialleniamo la rete su tutto il training e validation set, che si chiamava train_and_val_data
@@ -480,15 +480,30 @@ if __name__ == '__main__':
     test_y = test_data[:, -2:]
     # compute error
     test_error = NN.score(test_x, test_y)
-    print('test_error', test_error)
+    print('test error = ', test_error)
     # predetti
     test_predict = NN.predict(test_x)
-    #plot result
-    plt.scatter([point[0] for point in test_y], [point[1] for point in test_y], c='y', alpha=0.5)
-    plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='k', alpha=0.5)
-    plt.title('test')
+    # plot results
+    fig, ax = plt.subplots()
+    plt.scatter([point[0] for point in test_y], [point[1] for point in test_y])
+    plt.scatter([point[0] for point in test_predict], [point[1] for point in test_predict], c='r', alpha=0.8)
+    for point in test_predict:
+        circle = plt.Circle(tuple(point), 1.1787, color='b', alpha = 0.02)
+        ax.add_artist(circle)
+    plt.legend(('actual points', 'predicted points'))
+    plt.title('test points and test predictions')
     plt.show()
-    
+
+    # previsione finale sul blind data
+    data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
+    data_x = data[:, :-2]
+    data_y = data[:, -2:]
+    NN.fit(data_x, data_y)
+    blind_data = np.genfromtxt("ML-CUP18-TS.csv", delimiter=',')[:, 1:]
+    blind_predicted = NN.predict(blind_data)
+    np.savetxt('output_CUP.csv', blind_predicted, delimiter=',')
+
+
     '''
     # eliminiamo la colonna dell'indice
     data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]

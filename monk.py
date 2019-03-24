@@ -80,6 +80,7 @@ for neuron in neurons_per_layer:
 '''
 data = np.genfromtxt("monk1.txt")
 train_and_val_data_x = data[:, 1:-1]
+train_and_val_data_x = one_of_k(train_and_val_data_x)
 train_and_val_data_y = train_and_val_data[:, 0]
 train_and_val_data_y = train_and_val_data_y.reshape((train_and_val_data_y.shape[0], 1))
 cv = NN.k_fold_cv(train_and_val_data_x, train_and_val_data_y)
@@ -145,6 +146,7 @@ for neuron in neurons_per_layer:
 '''
 data = np.genfromtxt("monk2.txt")
 train_and_val_data_x = data[:, 1:-1]
+train_and_val_data_x = one_of_k(train_and_val_data_x)
 train_and_val_data_y = train_and_val_data[:, 0]
 train_and_val_data_y = train_and_val_data_y.reshape((train_and_val_data_y.shape[0], 1))
 cv = NN.k_fold_cv(train_and_val_data_x, train_and_val_data_y)
@@ -210,6 +212,7 @@ for neuron in neurons_per_layer:
 '''
 data = np.genfromtxt("monk3.txt")
 train_and_val_data_x = data[:, 1:-1]
+train_and_val_data_x = one_of_k(train_and_val_data_x)
 train_and_val_data_y = train_and_val_data[:, 0]
 train_and_val_data_y = train_and_val_data_y.reshape((train_and_val_data_y.shape[0], 1))
 cv = NN.k_fold_cv(train_and_val_data_x, train_and_val_data_y)
