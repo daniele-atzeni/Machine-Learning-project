@@ -422,11 +422,6 @@ class NeuralNetwork:
         
         return error_list
 
-def funzione(x):
-    if x < -17.825393:
-        return -1.1334002237288088 * (x + 28.835118) - 2.531668 
-    return 0.8568463444857496 * (x + 9.091727) - 7.759054
-
 
 if __name__ == '__main__':
     # eliminiamo la colonna dell'indice
@@ -502,70 +497,3 @@ if __name__ == '__main__':
     blind_data = np.genfromtxt("ML-CUP18-TS.csv", delimiter=',')[:, 1:]
     blind_predicted = NN.predict(blind_data)
     np.savetxt('output_CUP.csv', blind_predicted, delimiter=',')
-
-
-    '''
-    # eliminiamo la colonna dell'indice
-    data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
-    # splitting in test and train, after we shuffle the dataset
-    shuffle(data)
-    train_and_val_percentage = 0.7
-    n_train_and_val = round(len(data) * train_and_val_percentage)
-    train_and_val_data = data[:n_train_and_val, :]
-    test_data = data[n_train_and_val:, :]
-    # splitting in train and validation
-    train_percentage = 0.7
-    n_train = round(len(train_and_val_data) * train_percentage)
-    train_data = train_and_val_data[:n_train, :]
-    val_data = train_and_val_data[n_train:, :]
-    # splitting in train attributes, train target, test attr and test target
-    train_x = train_data[:, :-2]
-    train_y = train_data[:, -1].reshape((train_data.shape[0], 1))
-    val_x = val_data[:, :-2]
-    val_y = val_data[:, -1].reshape((val_data.shape[0], 1))
-    Y_tr = train_data[:, -2:]
-    Y = val_data[:, -2:]
-    # data normalization
-    # Z-score normalization
-    train_x = (train_x - np.mean(train_x, axis=0)) / np.std(train_x, axis=0)
-    val_x = (val_x - np.mean(val_x, axis=0)) / np.std(val_x, axis=0)
-    # normalization in [-1, 1]
-    #for i in range(train_x.shape[1]):
-    #    train_x[:, i] = 2 * ((train_x[:, i] - train_x[:, i].min()) / (train_x[:, i].max() - train_x[:, i].min())) - 1
-    #    val_x[:, i] = 2 * ((val_x[:, i] - val_x[:, i].min()) / (val_x[:, i].max() - val_x[:, i].min())) - 1
-    # grid seach
-    learning_rates = [0.005]
-    lambdas = [0.0]
-    alphas = [0]
-    neurons_per_layer = [20]
-    minibatch_sizes = [32]
-    layers_numbers = [1]
-    type_lr = 'constant'
-    for neuron in neurons_per_layer:
-        for layer in layers_numbers:
-            for learning_rate in learning_rates:
-                for Lambda in lambdas:
-                    for alpha in alphas:
-                        for  minibatch_size in minibatch_sizes:
-                            titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str((layer) * ['tanh']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch_size = ' + str(minibatch_size) + ', algorithm = ADAM'
-                            print(titolo)
-                            NN = NeuralNetwork((layer) * [neuron], (layer) * ['tanh'], learning_rate=learning_rate, type_lr=type_lr, Lambda=Lambda, alpha=alpha, toll=0.000001, n_init=1, max_epochs=100, minibatch_size=minibatch_size, algorithm='ADAM')
-                            error_list, n_epochs, test_error_list, acc_list, test_acc_list = NN.fit(train_x, train_y, val_x, val_y)
-                            print('train error = ' + str(error_list[-1]), 'test_error = ' + str(test_error_list[-1]), 'min test err = ' + str(min(test_error_list)))
-                            print('errore previsto train = ' + str(error_list[-1] + funzione(error_list[-1])), '    errore previsto test = ' + str(test_error_list[-1] + funzione(test_error_list[-1])))
-                            plt.plot(range(n_epochs + 1), error_list)
-                            plt.plot(range(n_epochs + 1), test_error_list, ls='dashed')
-                            plt.ylim((-0.5, 10))
-                            plt.legend(['train error', 'test error'])
-                            plt.title('MSE')
-                            plt.xlabel('number of epochs')
-                            plt.ylabel('MSE')
-                            plt.show()
-                            #plt.savefig('C:/Users/danie/Desktop/Daniele/Laurea magistrale/Machine Learning/Machine-Learning-project/plot/MSE_' + titolo +'.png')
-                            plt.close()
-                            pred_tr = np.array([np.array([funzione(y), y]) for y in NN.predict(train_x)])
-                            pred_tr = pred_tr.reshape((pred_tr.shape[0], pred_tr.shape[1]))
-                            pred = np.array([np.array([funzione(y), y]) for y in NN.predict(val_x)])
-                            pred = pred.reshape((pred.shape[0], pred.shape[1]))
-                            print('ERRORE TRAIN = ', sum(sum((Y_tr - pred_tr)**2)) / Y_tr.shape[0], '   ERRORE TEST = ', sum(sum((Y - pred)**2)) / Y.shape[0])
-'''
