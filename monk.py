@@ -66,7 +66,7 @@ for neuron in neurons_per_layer:
             for Lambda in lambdas:
                 for alpha in alphas:
                     for  minibatch_size in minibatch_sizes:
-                        titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str(layer * ['tanh']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch_size = ' + str(minibatch_size) + 'algorithm = ' + algorithm
+                        titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str(layer * ['tanh']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch_size = ' + str(minibatch_size) + ', algorithm = ' + algorithm
                         print(titolo)
                         NN = NeuralNetwork(layer * [neuron], layer * ['tanh'], classification=True, learning_rate=learning_rate, Lambda=Lambda, alpha=alpha, toll=0.000001, n_init=10, max_epochs=100, minibatch_size=minibatch_size, algorithm=algorithm)
                         NN.fit(train_x, train_y)
@@ -132,7 +132,7 @@ for neuron in neurons_per_layer:
             for Lambda in lambdas:
                 for alpha in alphas:
                     for  minibatch_size in minibatch_sizes:
-                        titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str(layer * ['tanh']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch_size = ' + str(minibatch_size) + 'algorithm = ' + algorithm
+                        titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str(layer * ['tanh']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch_size = ' + str(minibatch_size) + ', algorithm = ' + algorithm
                         print(titolo)
                         NN = NeuralNetwork(layer * [neuron], layer * ['tanh'], classification=True, learning_rate=learning_rate, Lambda=Lambda, alpha=alpha, toll=0.000001, n_init=10, max_epochs=100, minibatch_size=minibatch_size, algorithm=algorithm)
                         NN.fit(train_x, train_y)
@@ -198,7 +198,7 @@ for neuron in neurons_per_layer:
             for Lambda in lambdas:
                 for alpha in alphas:
                     for  minibatch_size in minibatch_sizes:
-                        titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str(layer * ['tanh']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch_size = ' + str(minibatch_size) + 'algorithm = ' + algorithm
+                        titolo = 'layer = ' + str(layer * [neuron]) + ', funzioni = ' + str(layer * ['tanh']) + ', learning_rate = ' + str(learning_rate) + ', Lambda = ' + str(Lambda) + ', alpha = ' + str(alpha) + ', minibatch_size = ' + str(minibatch_size) + ', algorithm = ' + algorithm
                         print(titolo)
                         NN = NeuralNetwork(layer * [neuron], layer * ['tanh'], classification=True, learning_rate=learning_rate, Lambda=Lambda, alpha=alpha, toll=0.000001, n_init=10, max_epochs=100, minibatch_size=minibatch_size, algorithm=algorithm)
                         NN.fit(train_x, train_y)
@@ -217,7 +217,7 @@ train_and_val_data_y = train_and_val_data[:, 0]
 train_and_val_data_y = train_and_val_data_y.reshape((train_and_val_data_y.shape[0], 1))
 cv = NN.k_fold_cv(train_and_val_data_x, train_and_val_data_y)
 print(np.mean(cv), np.std(cv))
-# OUTPUT: 0.386   0.0022
+# OUTPUT: 0.0386   0.0022
 '''
 # test set  
 print('MSE test set', NN.score(test_x, test_y))
