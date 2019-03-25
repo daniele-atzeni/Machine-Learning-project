@@ -1,0 +1,11 @@
+
+List of projects (by the CM course) for the ML project type <A) with CM> [See  the ML-18-PRJ  Lecture  for istructions]:
+
+https://elearning.di.unipi.it/course/view.php?id=131
+
+Section: Projects
+
+Links to MONK's datasets:
+
+http://archive.ics.uci.edu/ml/datasets/MONK%27s+Problems
+
