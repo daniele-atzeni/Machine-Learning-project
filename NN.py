@@ -2,7 +2,7 @@
 """
 Created on Tue Nov  6 14:20:03 2018
 
-@authors: senes, fibs1993
+@authors: senes and fibs1993
 """
 
 import numpy as np
