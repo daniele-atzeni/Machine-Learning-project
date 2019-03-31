@@ -490,10 +490,6 @@ if __name__ == '__main__':
     plt.show()
 
     # previsione finale sul blind data
-    data = np.genfromtxt("ML-CUP18-TR.csv", delimiter=',')[:, 1:]
-    data_x = data[:, :-2]
-    data_y = data[:, -2:]
-    NN.fit(data_x, data_y)
     blind_data = np.genfromtxt("ML-CUP18-TS.csv", delimiter=',')[:, 1:]
     blind_predicted = NN.predict(blind_data)
     np.savetxt('output_CUP.csv', blind_predicted, delimiter=',')
